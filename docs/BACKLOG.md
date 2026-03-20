@@ -69,11 +69,12 @@
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
 |----|---------|------|----------|--------|-------|--------|--------------|----------|
 | F-0027 | Cloud Scheduler (7AM PT daily start) | F-0027 | P0 | backlog | PE | — | — | |
-| F-0028 | App update startup script | F-0027 | P0 | backlog | SWE-1 | — | F-0027 | Updates: Claude Code, Gemini CLI, VSCode, IntelliJ, Antigravity |
-| F-0029 | Auto-launch 4 workspaces with apps | F-0027 | P0 | backlog | SWE-2 | — | F-0025, F-0028 | ws1=terminal, ws2=Chrome, ws3=Antigravity, ws4=terminal |
-| F-0030 | Install Nerd Fonts (CascadiaCode, FiraCode) | F-0030 | P0 | backlog | SWE-1 | — | — | All fonts from dev-fonts/ repo dir (Operator Mono, CascadiaCode, CaskaydiaCove NF, FiraCodeiScript). Terminal font: Operator Mono Book size=18 |
-| F-0031 | ZSH default shell + plugins (no plugin manager) | F-0030 | P0 | backlog | SWE-2 | — | F-0030 | zsh-syntax-highlighting + zsh-autosuggestions via git clone, source in .zshrc |
-| F-0032 | Starship prompt + foot terminal config | F-0030 | P0 | backlog | SWE-3 | — | F-0030, F-0031 | Starship via Nix, foot font=Operator Mono Book size=18 |
+| F-0028 | App update startup script | F-0027 | P0 | backlog | SWE-1 | — | F-0027, F-0033 | Updates: Claude Code, Gemini CLI, VSCode, IntelliJ, Antigravity. Deploy as ~/boot/07-apps.sh |
+| F-0029 | Auto-launch 4 workspaces with apps | F-0027 | P0 | backlog | SWE-2 | — | F-0025, F-0028, F-0033 | ws1=terminal, ws2=Chrome, ws3=Antigravity, ws4=terminal. Deploy as ~/boot/08-workspaces.sh |
+| F-0030 | Install Nerd Fonts (CascadiaCode, FiraCode) | F-0030 | P0 | backlog | SWE-1 | — | F-0033 | All fonts from dev-fonts/ repo dir (Operator Mono, CascadiaCode, CaskaydiaCove NF, FiraCodeiScript). Terminal font: Operator Mono Book size=18. Deploy as ~/boot/04-fonts.sh |
+| F-0031 | ZSH default shell + plugins (no plugin manager) | F-0030 | P0 | backlog | SWE-2 | — | F-0030, F-0033 | zsh-syntax-highlighting + zsh-autosuggestions via git clone, source in .zshrc. Deploy as ~/boot/05-shell.sh |
+| F-0032 | Starship prompt + foot terminal config | F-0030 | P0 | backlog | SWE-3 | — | F-0030, F-0031, F-0033 | Starship via Nix, foot font=Operator Mono Book size=18. Deploy as ~/boot/06-prompt.sh |
+| F-0033 | Persistent disk bootstrap architecture | F-0033 | P0 | backlog | PE | — | F-0026 | Lean Docker image + ~/boot/setup.sh. Eliminates future Docker rebuilds. One-time migration. |
 
 ---
 
