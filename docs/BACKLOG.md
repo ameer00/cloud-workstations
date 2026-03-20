@@ -34,6 +34,22 @@
 
 ---
 
+## Milestone 2: Nix App Migration
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0011 | Reboot workstation with new image | F-0011 | P0 | in-progress | PE | — | — | Image rebuilt with 200_persist-nix.sh. Stopping workstation to pick up new image. |
+| F-0012 | Set up Nix Home Manager (user + root) | F-0017 | P0 | backlog | SWE-1 | — | F-0011 | Declarative config at ~/.config/home-manager/home.nix. Both user and root. |
+| F-0013 | Verify Antigravity persistent install | F-0011 | P0 | backlog | SWE-1 | — | F-0011 | Already at ~/.antigravity. Verify launches after reboot. Proprietary, not in nixpkgs. |
+| F-0014 | Install browsers via Nix HM (Chromium, Chrome) | F-0017 | P0 | backlog | SWE-1 | — | F-0012 | nixpkgs.chromium, nixpkgs.google-chrome. Desktop shortcuts with --no-sandbox flags. |
+| F-0015 | Install dev tools via Nix HM (neovim, tmux, tree, zsh, ffmpeg) | F-0017 | P0 | backlog | SWE-1 | — | F-0012 | Set zsh as default shell. Neovim with custom init.lua (docs/specs/neovim-config/init.lua). All via Home Manager. |
+| F-0016 | Install Sway + Waybar + supporting apps via Nix HM | F-0016 | P0 | backlog | SWE-2 | — | F-0012 | 8 workspaces, waybar, foot, wofi, thunar, clipman. VNC compat. Full keybinding config (CTRL+SHIFT modifier). |
+| F-0017 | Install IDEs via Nix HM (VSCode, IntelliJ, Cursor) | F-0017 | P0 | backlog | SWE-2 | — | F-0012 | nixpkgs.vscode, nixpkgs.jetbrains.idea-community. Cursor may need AppImage/custom deriv. |
+| F-0018 | Install AI CLI tools via Nix (Claude Code, Gemini CLI) | F-0017 | P0 | backlog | SWE-3 | — | F-0012 | May need nodejs + npm global install. claude-code via npm, gemini-cli via npm. |
+| F-0019 | Post-reboot E2E validation | F-0011 | P0 | backlog | SWE-QA | — | F-0013 thru F-0018 | All apps survive stop/start cycle. Nix HM, Sway, all apps, GPU, noVNC. |
+
+---
+
 ## Future Items
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
