@@ -180,6 +180,12 @@
 - **floating_modifier**: Changed from `Ctrl+Shift` (invalid — sway only accepts single modifier) to `Mod4`
 - **sway-desktop.service**: Updated with `LD_LIBRARY_PATH=/var/lib/nvidia/lib64`
 
+### Antigravity Renderer Crash (code 5)
+- **Root cause**: `/dev/shm` only 64MB (k8s container default). Chromium renderer OOM on shared memory.
+- **Fix**: `--disable-dev-shm-usage` on all Electron/Chromium apps (Antigravity, VS Code, Chrome) — uses `/tmp` (31GB) instead.
+- **Not GPU-related** — Tesla T4 is healthy. GPU compositing disabled (`--disable-gpu`) since we're on VNC; CUDA compute unaffected.
+- **PO confirmed** Antigravity launches and runs stable.
+
 ### Next Steps
 - F-0023: Create comprehensive setup guide for recreating workstation from scratch
 - F-0019: Post-reboot E2E validation (Milestone 2 carryover)
