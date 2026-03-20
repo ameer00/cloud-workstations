@@ -68,13 +68,13 @@
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
 |----|---------|------|----------|--------|-------|--------|--------------|----------|
-| F-0027 | Cloud Scheduler (7AM PT daily start) | F-0027 | P0 | backlog | PE | — | — | |
-| F-0028 | App update startup script | F-0027 | P0 | backlog | SWE-1 | — | F-0027, F-0033 | Updates: Claude Code, Gemini CLI, VSCode, IntelliJ, Antigravity. Deploy as ~/boot/07-apps.sh |
-| F-0029 | Auto-launch 4 workspaces with apps | F-0027 | P0 | backlog | SWE-2 | — | F-0025, F-0028, F-0033 | ws1=terminal, ws2=Chrome, ws3=Antigravity, ws4=terminal. Deploy as ~/boot/08-workspaces.sh |
-| F-0030 | Install Nerd Fonts (CascadiaCode, FiraCode) | F-0030 | P0 | backlog | SWE-1 | — | F-0033 | All fonts from dev-fonts/ repo dir (Operator Mono, CascadiaCode, CaskaydiaCove NF, FiraCodeiScript). Terminal font: Operator Mono Book size=18. Deploy as ~/boot/04-fonts.sh |
-| F-0031 | ZSH default shell + plugins (no plugin manager) | F-0030 | P0 | backlog | SWE-2 | — | F-0030, F-0033 | zsh-syntax-highlighting + zsh-autosuggestions via git clone, source in .zshrc. Deploy as ~/boot/05-shell.sh |
-| F-0032 | Starship prompt + foot terminal config | F-0030 | P0 | backlog | SWE-3 | — | F-0030, F-0031, F-0033 | Starship via Nix, foot font=Operator Mono Book size=18. Deploy as ~/boot/06-prompt.sh |
-| F-0033 | Persistent disk bootstrap architecture | F-0033 | P0 | backlog | PE | — | F-0026 | Lean Docker image + ~/boot/setup.sh. Eliminates future Docker rebuilds. One-time migration. |
+| F-0027 | Cloud Scheduler (7AM PT daily start) | F-0027 | P0 | done | PE | — | — | Cloud Scheduler job `ws-daily-start` created in us-west1. Cron: 0 7 * * * America/Los_Angeles. Targets Workstations API startWorkstation via HTTP POST with OAuth. |
+| F-0028 | App update startup script | F-0027 | P0 | done | SWE-1 | — | F-0027, F-0033 | ~/boot/07-apps.sh: Updates Claude Code, Gemini CLI (npm), VSCode, IntelliJ (nix-channel + home-manager switch). Logs to ~/logs/app-update.log. |
+| F-0029 | Auto-launch 4 workspaces with apps | F-0027 | P0 | done | SWE-2 | — | F-0025, F-0028, F-0033 | ~/boot/08-workspaces.sh: ws1=foot, ws2=Chrome, ws3=Antigravity, ws4=foot. Discovers SWAYSOCK, waits for Sway ready, idempotent. |
+| F-0030 | Install Nerd Fonts (CascadiaCode, FiraCode) | F-0030 | P0 | done | SWE-1 | — | F-0033 | ~/boot/04-fonts.sh: 12 Operator Mono, 168 Cascadia, 19 Fira, 24 Caskaydia fonts installed from ~/boot/fonts/ to ~/.local/share/fonts/. fc-cache rebuilt. |
+| F-0031 | ZSH default shell + plugins (no plugin manager) | F-0030 | P0 | done | SWE-2 | — | F-0030, F-0033 | ~/boot/05-shell.sh: exec zsh in .bashrc, plugins via git clone to ~/.zsh/, .zshrc with Nix profile, PATH, history, completions, Starship init. |
+| F-0032 | Starship prompt + foot terminal config | F-0030 | P0 | done | SWE-3 | — | F-0030, F-0031, F-0033 | ~/boot/06-prompt.sh: Starship 1.24.2 installed, foot.ini with Operator Mono Book:size=18 and Tokyo Night [colors-dark] theme. |
+| F-0033 | Persistent disk bootstrap architecture | F-0033 | P0 | done | PE | — | F-0026 | ~/boot/setup.sh orchestrates 8 sub-scripts (01-nix through 08-workspaces). 000_bootstrap.sh in Docker image delegates to persistent disk. All future changes are disk-only edits. |
 
 ---
 

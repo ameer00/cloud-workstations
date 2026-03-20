@@ -296,3 +296,81 @@
 ### Next Steps
 - Begin Milestone 4 execution: F-0033 first (persistent bootstrap), then F-0027-F-0032
 - Note: startup script fix (mask TigerVNC) needs to be included in next Docker rebuild or persistent bootstrap
+
+---
+
+## Session 8 — 2026-03-20
+
+### Goals
+- Execute Milestone 4: Auto-Start & Daily Readiness (F-0027 through F-0033)
+- Create persistent disk bootstrap architecture
+- Install fonts, ZSH, Starship, foot config
+- Set up Cloud Scheduler and workspace auto-launch
+
+### Completed
+
+- **F-0033** (Persistent disk bootstrap): Created 9 scripts in `workstation-image/boot/`:
+  - `setup.sh` — Master orchestrator, sources all `[0-9][0-9]-*.sh` scripts in order
+  - `01-nix.sh` — Restores /nix bind mount from /home/user/nix
+  - `02-nvidia.sh` — nvidia ldconfig + PATH/LD_LIBRARY_PATH profile script
+  - `03-sway.sh` — Creates sway-desktop + wayvnc systemd services, masks TigerVNC
+  - `04-fonts.sh` — Installs fonts from ~/boot/fonts/ to ~/.local/share/fonts/
+  - `05-shell.sh` — ZSH default shell + plugins + .zshrc
+  - `06-prompt.sh` — Starship install + foot.ini config
+  - `07-apps.sh` — npm and Nix app updates, logs to ~/logs/app-update.log
+  - `08-workspaces.sh` — Auto-launches foot, Chrome, Antigravity, foot on 4 workspaces
+  - `000_bootstrap.sh` — Docker image bridge script (delegates to ~/boot/setup.sh)
+  - All scripts deployed to workstation persistent disk at ~/boot/
+
+- **F-0030** (Fonts): 223+ fonts installed from dev-fonts/ repo directory:
+  - 12 Operator Mono variants (XLight through Bold, Regular/Italic)
+  - 168 CascadiaCode variants (Code, Mono, PL in OTF+TTF)
+  - 19 FiraCodeiScript variants
+  - 24 CaskaydiaCove Nerd Font variants
+  - Font cache rebuilt via fc-cache
+
+- **F-0031** (ZSH): Default shell configured:
+  - `exec zsh` added to .bashrc (container chsh workaround)
+  - zsh-syntax-highlighting cloned to ~/.zsh/
+  - zsh-autosuggestions cloned to ~/.zsh/
+  - .zshrc: Nix profile, PATH, history (10K lines), emacs bindings, completions, plugins, Starship init
+
+- **F-0032** (Starship + foot): Terminal environment configured:
+  - Starship 1.24.2 installed via curl to ~/.local/bin/
+  - foot.ini: Operator Mono Book:size=18, Tokyo Night [colors-dark] theme, 8px padding, 10K scrollback
+
+- **F-0028** (App updates): Boot-time app update script:
+  - npm update for Claude Code + Gemini CLI
+  - nix-channel --update + home-manager switch for VSCode, IntelliJ
+  - Logs to ~/logs/app-update.log
+
+- **F-0029** (Workspace auto-launch): 4 workspaces pre-populated:
+  - ws1=foot, ws2=Chrome (--ozone-platform=wayland), ws3=Antigravity, ws4=foot
+  - SWAYSOCK auto-discovery for root→user swaymsg calls
+  - Waits up to 120s for Sway ready, idempotent (skips if windows exist)
+
+- **F-0027** (Cloud Scheduler): Daily 7AM PT auto-start:
+  - Job `ws-daily-start` in us-west1
+  - Cron: `0 7 * * *` America/Los_Angeles
+  - HTTP POST to Workstations API startWorkstation with OAuth token
+  - Next scheduled run: 2026-03-21T14:00:00Z
+
+### Issues Found and Fixed
+1. **swaymsg SWAYSOCK**: Running swaymsg as root via runuser couldn't find Sway socket. Fixed by auto-discovering `/run/user/1000/sway-ipc.*.sock` and passing as SWAYSOCK env var.
+2. **Chrome X11 fallback**: `google-chrome-stable` without `--ozone-platform=wayland` tried X11 and crashed. Fixed by adding wayland flag in 08-workspaces.sh.
+3. **foot.ini [colors] deprecated**: Newer foot versions require `[colors-dark]` instead of `[colors]`. `[cursor].color` also invalid. Fixed both.
+4. **cp -n warning**: GNU coreutils deprecated `-n` flag. Changed to `--update=none` in 04-fonts.sh.
+5. **Tmux pane size**: Interactive agent teams failed (tmux panes too small). Work done directly by orchestrator.
+
+### Decisions
+- All boot scripts stored in repo at `workstation-image/boot/` and deployed to `~/boot/` on persistent disk
+- Starship installed via curl (not in Nix) — more reliable for standalone binary
+- Chrome in 08-workspaces.sh uses system wrapper (`google-chrome-stable` with Docker divert) + `--ozone-platform=wayland`
+- 07-apps.sh runs Nix channel update + home-manager switch (may take 10-15s on boot)
+- Docker image lean rebuild deferred — 000_bootstrap.sh created but current image still has old startup scripts (harmless, 000_bootstrap runs first by sort order)
+
+### Next Steps
+- Rebuild lean Docker image (remove GNOME, Chrome APT, Antigravity APT — keep only base + systemd + TigerVNC/noVNC + 000_bootstrap.sh)
+- Reboot workstation to verify full bootstrap flow end-to-end
+- Tag v1.4 release after PO approval
+- Backlog is empty — await next PO direction

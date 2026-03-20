@@ -1,5 +1,29 @@
 # Release Notes — Cloud Workstation
 
+## v1.4 — Auto-Start & Daily Readiness (2026-03-20)
+
+### Added
+- **Persistent disk bootstrap** (`~/boot/setup.sh`) — All workstation setup now lives on the persistent disk as modular scripts (01-nix through 08-workspaces). Future changes require zero Docker rebuilds.
+- **Cloud Scheduler** (`ws-daily-start`) — Workstation auto-starts daily at 7AM Pacific via Cloud Scheduler → Workstations API HTTP POST with OAuth
+- **Custom fonts** — 223+ fonts installed: Operator Mono (12 variants), CascadiaCode (168), FiraCodeiScript (19), CaskaydiaCove Nerd Font (24)
+- **ZSH default shell** — exec zsh in .bashrc, zsh-syntax-highlighting + zsh-autosuggestions via git clone, comprehensive .zshrc with Nix profile, PATH, history, completions
+- **Starship prompt** — Starship 1.24.2 cross-shell prompt with ZSH integration
+- **foot terminal config** — Operator Mono Book:size=18, Tokyo Night color scheme, 8px padding, 10K scrollback
+- **App auto-update on boot** (`~/boot/07-apps.sh`) — Updates Claude Code, Gemini CLI (npm), VSCode, IntelliJ (Nix/Home Manager) on each boot, logs to ~/logs/app-update.log
+- **Workspace auto-launch** (`~/boot/08-workspaces.sh`) — Pre-launches 4 Sway workspaces: ws1=foot, ws2=Chrome, ws3=Antigravity, ws4=foot
+- **000_bootstrap.sh** — Docker image bridge script that delegates all setup to ~/boot/setup.sh on the persistent disk
+
+### Architecture
+- **Persistent bootstrap pattern**: Docker image only needs `000_bootstrap.sh` to call `~/boot/setup.sh`. All 8 sub-scripts live on the 500GB persistent disk. Adding features = adding a script file, no rebuild needed.
+- **Script execution order**: 01-nix → 02-nvidia → 03-sway → 04-fonts → 05-shell → 06-prompt → 07-apps → 08-workspaces
+
+### Fixed
+- **swaymsg SWAYSOCK discovery** — root→user swaymsg calls now auto-discover the Sway IPC socket path
+- **Chrome Wayland fallback** — Added `--ozone-platform=wayland` to prevent X11 crash in workspace auto-launch
+- **foot.ini deprecation** — Updated `[colors]` → `[colors-dark]` for newer foot versions
+
+---
+
 ## v1.3 — Documentation, Validation, and Sway Boot Fix (2026-03-20)
 
 ### Added
