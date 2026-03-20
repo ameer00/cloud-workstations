@@ -38,14 +38,14 @@
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
 |----|---------|------|----------|--------|-------|--------|--------------|----------|
-| F-0011 | Reboot workstation with new image | F-0011 | P0 | in-progress | PE | — | — | Image rebuilt with 200_persist-nix.sh. Stopping workstation to pick up new image. |
-| F-0012 | Set up Nix Home Manager (user + root) | F-0017 | P0 | backlog | SWE-1 | — | F-0011 | Declarative config at ~/.config/home-manager/home.nix. Both user and root. |
-| F-0013 | Verify Antigravity persistent install | F-0011 | P0 | backlog | SWE-1 | — | F-0011 | Already at ~/.antigravity. Verify launches after reboot. Proprietary, not in nixpkgs. |
-| F-0014 | Install browsers via Nix HM (Chromium, Chrome) | F-0017 | P0 | backlog | SWE-1 | — | F-0012 | nixpkgs.chromium, nixpkgs.google-chrome. Desktop shortcuts with --no-sandbox flags. |
-| F-0015 | Install dev tools via Nix HM (neovim, tmux, tree, zsh, ffmpeg) | F-0017 | P0 | backlog | SWE-1 | — | F-0012 | Set zsh as default shell. Neovim with custom init.lua (docs/specs/neovim-config/init.lua). All via Home Manager. |
-| F-0016 | Install Sway + Waybar + supporting apps via Nix HM | F-0016 | P0 | backlog | SWE-2 | — | F-0012 | 8 workspaces, waybar, foot, wofi, thunar, clipman. VNC compat. Full keybinding config (CTRL+SHIFT modifier). |
-| F-0017 | Install IDEs via Nix HM (VSCode, IntelliJ, Cursor) | F-0017 | P0 | backlog | SWE-2 | — | F-0012 | nixpkgs.vscode, nixpkgs.jetbrains.idea-community. Cursor may need AppImage/custom deriv. |
-| F-0018 | Install AI CLI tools via Nix (Claude Code, Gemini CLI) | F-0017 | P0 | backlog | SWE-3 | — | F-0012 | May need nodejs + npm global install. claude-code via npm, gemini-cli via npm. |
+| F-0011 | Reboot workstation with new image | F-0011 | P0 | done | PE | — | — | Rebooted. /nix bind mount restored (not symlink — Nix rejects symlinks). nvidia profile restored. VNC running. |
+| F-0012 | Set up Nix Home Manager (user + root) | F-0017 | P0 | done | SWE-1 | — | F-0011 | Home Manager v26.05-pre installed. home.nix with allowUnfree, all packages declared. |
+| F-0013 | Verify Antigravity persistent install | F-0011 | P0 | done | SWE-1 | — | F-0011 | Verified after reboot. Fixed wrapper path. v1.107.0 working from ~/.antigravity/. |
+| F-0014 | Install browsers via Nix HM (Chromium, Chrome) | F-0017 | P0 | done | SWE-1 | — | F-0012 | Chromium 146.0.7680.80, Google Chrome 146.0.7680.80 — both via home-manager. |
+| F-0015 | Install dev tools via Nix HM (neovim, tmux, tree, zsh, ffmpeg) | F-0017 | P0 | done | SWE-1 | — | F-0012 | NVIM 0.11.6 + custom init.lua, tmux 3.6a, zsh 5.9, ffmpeg 8.0.1, ripgrep, fd, jq. |
+| F-0016 | Install Sway + Waybar + supporting apps via Nix HM | F-0016 | P0 | done | SWE-2 | — | F-0012 | Sway 1.11, Waybar 0.15.0, foot 1.26.1, wofi, thunar, clipman, wayvnc. Full keybinding config. |
+| F-0017 | Install IDEs via Nix HM (VSCode, IntelliJ, Cursor) | F-0017 | P0 | done | SWE-2 | — | F-0012 | VSCode 1.111.0, IntelliJ IDEA OSS. Cursor not in nixpkgs — TBD. |
+| F-0018 | Install AI CLI tools via Nix (Claude Code, Gemini CLI) | F-0017 | P0 | done | SWE-3 | — | F-0012 | Claude Code 2.1.80, Gemini CLI 0.34.0 — both via npm to ~/.npm-global/bin. Node.js 22.22.1 via Nix. |
 | F-0019 | Post-reboot E2E validation | F-0011 | P0 | backlog | SWE-QA | — | F-0013 thru F-0018 | All apps survive stop/start cycle. Nix HM, Sway, all apps, GPU, noVNC. |
 
 ---

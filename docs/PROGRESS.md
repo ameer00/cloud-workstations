@@ -61,3 +61,50 @@
 - Grant ameer00@gmail.com access (stop workstation, set IAM, restart)
 - Test stop/start cycle to verify persistence (Nix, GPU profile, data)
 - Tag v1.0 release after PO approval
+
+---
+
+## Session 3 — 2026-03-20 (continued)
+
+### Goals
+- Milestone 2: Migrate all app installs to Nix Home Manager
+- Install Sway + Waybar with 8 workspaces and custom keybindings
+- Install full app suite: neovim, tmux, zsh, ffmpeg, chromium, chrome, vscode, intellij, cursor, claude-code, gemini-cli
+- Configure Neovim with custom init.lua
+
+### Completed So Far
+- Moved /nix to persistent disk at /home/user/nix with bind mount (not symlink — Nix rejects symlinks)
+- Added 200_persist-nix.sh startup script to Docker image (restores /nix bind mount + nvidia paths on boot)
+- Rebuilt Docker image via Cloud Build (SUCCESS)
+- Rebooted workstation — startup scripts verified working (/nix bind mount, nvidia, VNC)
+- Copied Antigravity to persistent disk at ~/.antigravity — verified working after reboot (v1.107.0)
+- Created specs: F-0011 (nix migration), F-0016 (sway/waybar), F-0017 (nix HM apps)
+- Saved Sway keybindings, Neovim keybindings, and Neovim init.lua config locally
+- Created Milestone 2 backlog (F-0011 through F-0019)
+- Committed all specs and configs
+- Installed Nix Home Manager v26.05-pre
+- Created comprehensive home.nix with ALL packages: neovim, tmux, tree, zsh, ffmpeg, chromium, google-chrome, vscode, jetbrains.idea-community, sway, waybar, foot, wofi, thunar, clipman, wayvnc, nodejs_22
+- Created Sway config with full keybindings (CTRL+SHIFT modifier, 8 workspaces)
+- Created Waybar config (workspaces, CPU, memory, disk, clock)
+- Created Neovim init.lua config (Space leader, floating terminal, habamax theme)
+- Running home-manager switch to install everything
+- Fixed: jetbrains.idea-community removed from nixpkgs — using jetbrains.idea-oss
+- Fixed: Added nixpkgs.config.allowUnfree = true for Chrome, VSCode, etc.
+- Fixed: /nix must be bind mount, not symlink — Nix rejects symlinks
+- home-manager switch SUCCESS — all packages installed
+- Verified all apps: NVIM 0.11.6, tmux 3.6a, zsh 5.9, ffmpeg 8.0.1, Chromium 146, Chrome 146, VSCode 1.111.0, IntelliJ OSS, Sway 1.11, Waybar 0.15.0, foot 1.26.1, Node.js 22.22.1
+- Claude Code 2.1.80 and Gemini CLI 0.34.0 installed via npm to ~/.npm-global/bin
+- All configs deployed: Neovim init.lua, Sway config (8 workspaces, CTRL+SHIFT keybindings), Waybar config, foot config
+
+### In Progress
+- F-0012 through F-0018: Running `home-manager switch` with comprehensive home.nix containing ALL packages
+
+### Pending
+- F-0012: Set up Nix Home Manager (blocked on F-0011)
+- F-0013: Verify Antigravity persistent (blocked on F-0011)
+- F-0014: Install browsers via Nix HM (blocked on F-0012)
+- F-0015: Install dev tools via Nix HM (blocked on F-0012)
+- F-0016: Install Sway + Waybar (blocked on F-0012)
+- F-0017: Install IDEs via Nix HM (blocked on F-0012)
+- F-0018: Install AI CLI tools (blocked on F-0012)
+- F-0019: E2E validation (blocked on all above)

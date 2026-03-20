@@ -1,5 +1,32 @@
 # Release Notes — Cloud Workstation
 
+## v1.1 — Nix Home Manager + Full App Suite (2026-03-20)
+
+### Added
+- Nix Home Manager v26.05-pre — all packages declared in `~/.config/home-manager/home.nix`
+- **Dev Tools**: Neovim 0.11.6 (custom init.lua), tmux 3.6a, zsh 5.9, ffmpeg 8.0.1, ripgrep, fd, jq, tree
+- **Browsers**: Chromium 146.0.7680.80, Google Chrome 146.0.7680.80
+- **IDEs**: VS Code 1.111.0, IntelliJ IDEA OSS
+- **Sway Desktop**: Sway 1.11, Waybar 0.15.0, foot 1.26.1, wofi, thunar, clipman, wayvnc, mako
+- **AI CLI Tools**: Claude Code 2.1.80, Gemini CLI 0.34.0 (via npm to `~/.npm-global/bin`)
+- **Sway Config**: 8 workspaces (CTRL+SHIFT+U/I/O/P/H/J/K/L), CTRL+SHIFT modifier, full keybinding set
+- **Neovim Config**: Space leader, habamax theme, floating terminal, auto yank highlight
+- Waybar with workspace indicators, CPU, memory, disk, clock
+- Startup script `200_persist-nix.sh` for /nix bind mount + nvidia paths
+
+### Changed
+- /nix uses bind mount instead of symlink (Nix rejects symlinks)
+- Docker image rebuilt with startup script for persistent Nix
+- IntelliJ: `idea-community` removed from nixpkgs, using `idea-oss`
+- Antigravity wrapper path fixed (double directory: `~/.antigravity/antigravity/bin/`)
+
+### Known Issues
+- Cursor IDE not in nixpkgs — needs AppImage approach
+- Sway VNC integration needs testing (wayvnc vs TigerVNC)
+- ameer00@gmail.com IAM access still pending (API precondition)
+
+---
+
 ## v1.0 — Cloud Workstation Live (2026-03-20)
 
 ### Added
