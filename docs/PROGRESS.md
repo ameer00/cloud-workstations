@@ -36,7 +36,7 @@
 - **F-0004/F-0005** (Config): Created `ws-config` — n1-standard-16 + nvidia-tesla-t4, 500GB pd-ssd, 4h idle/12h run, no public IP, Shielded VM
 - **F-0006** (GPU): Tesla T4 verified — Driver 535.288.01, CUDA 12.2, nvidia-smi at `/var/lib/nvidia/bin/`. Created `/etc/profile.d/nvidia.sh` for PATH/LD_LIBRARY_PATH
 - **F-0007** (Nix): Nix 2.34.2 installed on persistent HOME disk. `nix-env -iA` works. Created Cloud Router `ws-router` + Cloud NAT `ws-nat` for internet access
-- **F-0008** (IAM/Network): admin@ameerabbas.altostrat.com has workstations.user. AR reader granted to service agent. No public IP + Shielded VM (org policies). ameer00@gmail.com access pending (API precondition issue — can be set when workstation is stopped)
+- **F-0008** (IAM/Network): admin@ameerabbas.altostrat.com has workstations.user. AR reader granted to service agent. No public IP + Shielded VM (org policies). ameer00@gmail.com access pending (API precondition issue — can be set when workstation is stopped) (removed — no longer needed)
 - **F-0009** (Workstation): `dev-workstation` RUNNING at `dev-workstation.cluster-wg3q6vm6rnflcvjsrq5k7aqoac.cloudworkstations.dev`
 - **F-0010** (E2E): All verified — Antigravity installed, noVNC active (HTTP 302 via proxy), TigerVNC active, T4 GPU working, Nix 2.34.2 with package install, 492GB home disk available
 
@@ -58,7 +58,7 @@
 - Cloud NAT for internet access (required due to no public IP org policy)
 
 ### Next Steps
-- Grant ameer00@gmail.com access (stop workstation, set IAM, restart)
+- Grant ameer00@gmail.com access (stop workstation, set IAM, restart) (removed — no longer needed)
 - Test stop/start cycle to verify persistence (Nix, GPU profile, data)
 - Tag v1.0 release after PO approval
 
@@ -234,3 +234,26 @@
 - Rebuild Docker image to include 300_setup-sway-desktop.sh natively
 - All milestones 1-3 items complete (F-0001 through F-0025)
 - Tag v1.3 release after PO approval
+
+---
+
+## Session 6 — 2026-03-20
+
+### Goals
+- Tag v1.3 release
+- Rebuild Docker image with startup scripts baked in
+- Clean up docs (remove obsolete ameer00@gmail.com IAM item)
+
+### Completed
+- **v1.3 tagged** — Annotated git tag for Milestone 3 completion
+- **F-0026** (Docker image rebuild): Rebuilt image via Cloud Build to natively include `300_setup-sway-desktop.sh` (Sway auto-start on boot). Old AR images cleaned up.
+- **ameer00@gmail.com IAM** — Removed from all docs (PO confirmed no longer needed)
+- **All docs updated**: BACKLOG.md, PROGRESS.md, RELEASENOTES.md
+
+### Decisions
+- ameer00@gmail.com IAM access removed per PO direction (no longer needed)
+- Docker image now includes all 3 startup scripts natively (no manual deployment needed after reboot)
+
+### Next Steps
+- Reboot workstation to verify new image works end-to-end
+- Future items backlog is empty — await next PO direction

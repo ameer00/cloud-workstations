@@ -5,6 +5,7 @@
 ### Added
 - **Comprehensive setup guide** (`docs/SETUP.md`, 1,137 lines) — 14-section step-by-step guide to recreate the entire Cloud Workstation from scratch, usable by humans and AI agents
 - **Sway auto-start on boot** (`300_setup-sway-desktop.sh`) — startup script creates sway-desktop + wayvnc systemd services on every boot, disables TigerVNC, adds nvidia ldconfig
+- **Docker image rebuilt** — natively includes `300_setup-sway-desktop.sh` (Sway auto-start on boot). No more manual deployment of startup scripts after workstation reboot.
 
 ### Fixed
 - **GNOME starting instead of Sway on reboot** — Sway/wayvnc services were on ephemeral disk and lost on restart. New startup script recreates them before systemd boots
@@ -58,7 +59,6 @@
 ### Known Issues
 - Cursor IDE not in nixpkgs — needs AppImage approach
 - Sway VNC integration needs testing (wayvnc vs TigerVNC)
-- ameer00@gmail.com IAM access still pending (API precondition)
 
 ---
 
@@ -85,7 +85,6 @@
 - **Nix:** `. /home/user/.nix-profile/etc/profile.d/nix.sh` (auto-sourced on login)
 
 ### Known Issues
-- ameer00@gmail.com IAM access pending (API precondition issue — set when workstation is stopped)
 - Machine type is n1-standard-16 (60GB RAM) instead of g2-standard-16 (64GB) — g2 not supported by Cloud Workstations
 - GPU is Tesla T4 instead of L4 — L4 not supported as Cloud Workstations accelerator
 - `/etc/profile.d/nvidia.sh` is on ephemeral disk — will need re-creation after container restart (should be added to Dockerfile or startup script)

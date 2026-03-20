@@ -28,7 +28,7 @@
 | F-0005 | Persistent disk setup (500GB SSD, HOME) | F-0001 | P0 | done | PE | feature/ws-disk | F-0004 | 500GB pd-ssd configured in ws-config via --pd-disk-size=500 --pd-disk-type=pd-ssd |
 | F-0006 | GPU driver verification (T4) | F-0001 | P0 | done | PE | feature/ws-gpu-drivers | F-0009 | Tesla T4 verified, Driver 535.288.01, CUDA 12.2. nvidia-smi at /var/lib/nvidia/bin/. Profile script created. |
 | F-0007 | Nix package manager (persistent disk) | F-0001 | P1 | done | PE | feature/ws-nix | F-0009 | Nix 2.34.2 installed on persistent disk. nix-env works. Cloud Router + NAT created for internet. |
-| F-0008 | Network and IAM configuration | F-0001 | P0 | done | PE | feature/ws-iam | F-0001 | admin@ameerabbas.altostrat.com has workstations.user. AR reader granted. ameer00@gmail.com pending (API precondition). No public IP, Shielded VM enabled. |
+| F-0008 | Network and IAM configuration | F-0001 | P0 | done | PE | feature/ws-iam | F-0001 | admin@ameerabbas.altostrat.com has workstations.user. AR reader granted. No public IP, Shielded VM enabled. |
 | F-0009 | Workstation creation and VNC setup | F-0001 | P0 | done | PE | feature/ws-create | F-0004, F-0008 | dev-workstation RUNNING. Host: dev-workstation.cluster-wg3q6vm6rnflcvjsrq5k7aqoac.cloudworkstations.dev |
 | F-0010 | End-to-end validation | F-0001 | P0 | done | SWE-QA | — | F-0009, F-0006, F-0007 | All verified: Antigravity installed, noVNC active (HTTP 302 via proxy), T4 GPU working, Nix 2.34.2 with package install, 492GB home disk |
 
@@ -60,6 +60,17 @@
 | F-0023 | Comprehensive setup documentation | — | P1 | done | SWE-3 | — | F-0020, F-0021 | docs/SETUP.md created (1137 lines, 14 sections). Covers prerequisites through troubleshooting. Usable by humans and AI agents. |
 | F-0024 | E2E validation of modern desktop | F-0020 | P1 | done | SWE-QA | — | F-0020, F-0021, F-0022 | PO confirmed: swaybar visible, GPU in status bar, keybindings working, Antigravity launches stable. |
 | F-0025 | Sway auto-start on boot (startup script) | — | P0 | done | SWE-1 | — | F-0016, F-0020 | 300_setup-sway-desktop.sh creates sway-desktop + wayvnc services on boot. Disables TigerVNC. Adds nvidia ldconfig. Deployed and verified: Sway active, wayvnc on 5901, noVNC proxying port 80. |
+| F-0026 | Docker image rebuild with startup scripts | — | P0 | done | PE | — | F-0025 | Image rebuilt via Cloud Build to natively include 300_setup-sway-desktop.sh. Old images cleaned up. |
+
+---
+
+## Milestone 4: Auto-Start & Daily Readiness
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0027 | Cloud Scheduler (7AM PT daily start) | F-0027 | P0 | backlog | PE | — | — | |
+| F-0028 | App update startup script | F-0027 | P0 | backlog | SWE-1 | — | F-0027 | Updates: Claude Code, Gemini CLI, VSCode, IntelliJ, Antigravity |
+| F-0029 | Auto-launch 4 workspaces with apps | F-0027 | P0 | backlog | SWE-2 | — | F-0025, F-0028 | ws1=terminal, ws2=Chrome, ws3=Antigravity, ws4=terminal |
 
 ---
 
