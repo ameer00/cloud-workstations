@@ -2,95 +2,164 @@
 
 GPU-powered Cloud Workstation in GCP with Sway desktop, Nix package manager, and a full dev environment — accessible from any browser via noVNC.
 
-## Quick Start
+## Setup
 
 ### Prerequisites
 
-- A GCP project with **Owner** permissions
-- **NVIDIA T4 GPU quota** in `us-west1` (at least 1) — [request quota](https://console.cloud.google.com/iam-admin/quotas)
-- **Cloud Shell** or any terminal with `gcloud` CLI installed
+1. A GCP project where you have **Owner** role
+2. **NVIDIA T4 GPU quota** in `us-west1` (at least 1) — [check/request quota here](https://console.cloud.google.com/iam-admin/quotas?metric=NVIDIA_T4_GPUS)
+3. **Cloud Shell** (recommended) or any terminal with `gcloud` CLI
 
-### Setup (one command)
+### Step 1: Authenticate
+
+Open [Cloud Shell](https://shell.cloud.google.com) and run:
 
 ```bash
-# 1. Authenticate with your GCP account
 gcloud auth login
+```
 
-# 2. Run the setup script
+### Step 2: Run setup
+
+```bash
 git clone https://github.com/ameer00/cloud-workstations.git
 cd cloud-workstations
 bash scripts/setup.sh -p YOUR_PROJECT_ID
 ```
 
-That's it. The script submits a Cloud Build job that does everything. **You can close your terminal** — the build runs independently in GCP.
+Replace `YOUR_PROJECT_ID` with your GCP project ID.
 
-### Get notified when it's done (optional)
+**You can close your terminal immediately after the script prints the build ID.** All work runs inside Cloud Build and will continue independently.
 
-Add a Google Chat webhook to receive notifications on progress and completion:
+### Step 3 (optional): Get notified via Google Chat
+
+To receive progress updates and a notification when setup completes or fails:
+
+1. Open [Google Chat](https://chat.google.com)
+2. Create a new Space (e.g. "Workstation Alerts")
+3. Click the space name → **Apps & integrations** → **Manage webhooks**
+4. Create a webhook, copy the URL
+5. Pass it to the setup script:
 
 ```bash
-bash scripts/setup.sh -p YOUR_PROJECT_ID --webhook "https://chat.googleapis.com/v1/spaces/XXXXX/messages?key=YYY&token=ZZZ"
+bash scripts/setup.sh -p YOUR_PROJECT_ID -w "YOUR_WEBHOOK_URL"
 ```
 
-To create a webhook: Google Chat → Create Space → Space name → Apps & integrations → Manage webhooks → Copy URL.
+You'll receive Google Chat messages at each milestone:
+- Build started (with link to Cloud Console)
+- Docker image built
+- Workstation running
+- Setup complete (with workstation URL) or failed (with error details)
 
-You'll receive messages when:
-- Build starts
-- Infrastructure is ready (Docker image built)
-- Workstation is running (SSH ready)
-- Setup completes (with PASS/FAIL summary and workstation URL)
-- Setup fails (with error details and retry instructions)
+### Track progress
 
-### Track Progress
-
-The script prints a Cloud Console URL. You can also check via CLI:
+The setup script prints a Cloud Console link. You can also stream logs:
 
 ```bash
 gcloud builds log BUILD_ID --stream --project=YOUR_PROJECT_ID --region=us-west1
 ```
 
-Setup takes ~30-45 minutes (cluster creation + Nix package installation).
+Setup takes approximately **30-45 minutes**.
 
-### Connect
+## After Setup
 
-Once setup completes, start your workstation and open the URL in a browser:
+### Start your workstation
+
+The setup script stops the workstation at the end to save costs. Start it when you're ready:
 
 ```bash
-# Start the workstation
 gcloud workstations start dev-workstation \
-  --config=ws-config --cluster=workstation-cluster \
-  --region=us-west1 --project=YOUR_PROJECT_ID
+  --config=ws-config \
+  --cluster=workstation-cluster \
+  --region=us-west1 \
+  --project=YOUR_PROJECT_ID
+```
 
-# Get the URL
+### Connect via browser
+
+Get the workstation URL:
+
+```bash
 gcloud workstations describe dev-workstation \
-  --config=ws-config --cluster=workstation-cluster \
-  --region=us-west1 --project=YOUR_PROJECT_ID \
+  --config=ws-config \
+  --cluster=workstation-cluster \
+  --region=us-west1 \
+  --project=YOUR_PROJECT_ID \
   --format="value(host)"
 ```
 
-Open `https://<host>` in your browser. The noVNC desktop loads automatically.
+Open `https://<host>` in your browser. The noVNC desktop loads automatically with 4 pre-launched workspaces.
 
-## What You Get
+### Daily auto-start
+
+A Cloud Scheduler job starts the workstation every day at **7:00 AM Pacific**. No action needed.
+
+## What's Included
 
 | Component | Details |
 |-----------|---------|
-| **Machine** | n1-standard-16 (60GB RAM) + NVIDIA Tesla T4 GPU |
-| **Storage** | 500GB persistent SSD (survives reboots) |
-| **Desktop** | Sway (Wayland) with Tokyo Night theme via noVNC |
-| **Terminal** | ZSH + Starship prompt + Operator Mono font (size 18) |
+| **Machine** | n1-standard-16 (60GB RAM) + NVIDIA Tesla T4 GPU (16GB VRAM) |
+| **Storage** | 500GB persistent SSD (all data survives reboots) |
+| **Desktop** | Sway (Wayland) with Tokyo Night theme, accessed via noVNC in browser |
+| **Terminal** | foot terminal, ZSH + Starship prompt, Operator Mono Book font (size 18) |
+| **Fonts** | Operator Mono, CascadiaCode, CaskaydiaCove Nerd Font, FiraCodeiScript |
 | **Browsers** | Google Chrome, Chromium |
-| **IDEs** | VS Code, Neovim (with custom config) |
+| **IDEs** | VS Code, Neovim (custom config) |
 | **AI Tools** | Claude Code, Gemini CLI |
-| **Apps** | Antigravity, tmux, ripgrep, fd, jq, ffmpeg |
+| **Apps** | Antigravity, tmux, ripgrep, fd, jq, ffmpeg, wofi, thunar |
 | **Auto-start** | Cloud Scheduler starts workstation daily at 7AM PT |
 | **Boot apps** | 4 workspaces auto-launch: terminal, Chrome, Antigravity, terminal |
+| **Packages** | Managed via Nix Home Manager on persistent disk |
+
+## Keyboard Shortcuts
+
+All shortcuts use `CTRL+SHIFT` as the modifier (works through noVNC in browser).
+
+| Shortcut | Action |
+|----------|--------|
+| `CTRL+SHIFT+Enter` | New terminal |
+| `CTRL+SHIFT+B` | Chrome browser |
+| `CTRL+SHIFT+N` | Antigravity |
+| `CTRL+SHIFT+Y` | VS Code |
+| `CTRL+SHIFT+R` | App launcher (wofi) |
+| `CTRL+SHIFT+E` | File manager |
+| `CTRL+SHIFT+Q` | Close window |
+| `CTRL+SHIFT+F` | Toggle fullscreen |
+| `CTRL+SHIFT+U/I/O/P` | Switch to workspace 1/2/3/4 |
+| `CTRL+SHIFT+H/J/K/L` | Switch to workspace 5/6/7/8 |
 
 ## Re-running Setup
 
-The setup is fully idempotent. If it fails or you want to update, just run it again:
+The setup is fully **idempotent**. If it fails or you want to update, just run it again:
 
 ```bash
 bash scripts/setup.sh -p YOUR_PROJECT_ID
 ```
 
 Existing resources are detected and skipped. Only missing components are created.
+
+## Teardown / Cleanup
+
+To delete **all** resources created by setup (workstation, cluster, images, NAT, scheduler):
+
+```bash
+bash scripts/teardown.sh -p YOUR_PROJECT_ID
+```
+
+Add `-y` to skip the confirmation prompt. Add `--webhook` for notifications.
+
+This is useful for:
+- Testing setup from scratch
+- Cleaning up a project you no longer need
+- Freeing GPU quota for another project
+
+After teardown, you can re-run `setup.sh` to recreate everything.
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| "No GPU quota" | [Request NVIDIA_T4_GPUS quota](https://console.cloud.google.com/iam-admin/quotas) in us-west1 (at least 1) |
+| Build fails mid-way | Re-run `setup.sh` — it picks up where it left off |
+| Can't connect via noVNC | Ensure workstation is started, wait 30s for Sway + wayvnc to boot |
+| Apps not on workspaces | Wait 15-20s after boot for auto-launch to complete |
+| Cloud Shell disconnected | No problem — Cloud Build continues independently. Check progress in Cloud Console |
