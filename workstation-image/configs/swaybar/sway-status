@@ -95,13 +95,13 @@ collect_cpu() {
 
 collect_gpu() {
     local gpu_info temp util text color
-    gpu_info=$(nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu \
+    gpu_info=$(/var/lib/nvidia/bin/nvidia-smi --query-gpu=name,temperature.gpu,utilization.gpu \
                           --format=csv,noheader,nounits 2>/dev/null)
 
     if [[ -n "$gpu_info" ]]; then
         IFS=', ' read -r _ gpu_name temp util <<< "$gpu_info"
-        # nvidia-smi name is e.g. "Tesla T4"; extract short name
-        gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | sed 's/.*\(T4\|A100\|V100\|L4\|A10G\|P100\)/\1/' | head -1)
+        # /var/lib/nvidia/bin/nvidia-smi name is e.g. "Tesla T4"; extract short name
+        gpu_name=$(/var/lib/nvidia/bin/nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | sed 's/.*\(T4\|A100\|V100\|L4\|A10G\|P100\)/\1/' | head -1)
         gpu_name=${gpu_name:-GPU}
         temp=$(echo "$gpu_info" | awk -F', ' '{print $2}' | tr -d ' ')
         util=$(echo "$gpu_info" | awk -F', ' '{print $3}' | tr -d ' ')
