@@ -66,6 +66,8 @@ log "Enabled sway-desktop and wayvnc services"
 
 # --- Disable and mask TigerVNC ---
 rm -f /etc/systemd/system/multi-user.target.wants/tigervnc.service
-ln -sf /dev/null /etc/systemd/system/tigervnc.service
+# Must rm first — ln -sf fails on overlay fs with regular files
+rm -f /etc/systemd/system/tigervnc.service
+ln -s /dev/null /etc/systemd/system/tigervnc.service
 pkill -f Xtigervnc 2>/dev/null || true
 log "Disabled and masked TigerVNC (port 5901 now served by wayvnc)"
