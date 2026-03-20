@@ -170,6 +170,17 @@
 - **Swaybar not spawning**: Sway's process PATH only included system dirs, not Nix store paths. Swaybar binary couldn't be found. Fixed by adding explicit `swaybar_command /home/user/.nix-profile/bin/swaybar` and using absolute path for `status_command`. After reload, swaybar spawned successfully with sway-status script running.
 - **PO confirmed** swaybar visible with Tokyo Night theme and color-coded status modules.
 
+### Critical Bug Fixes (Nix PATH isolation)
+- **Root cause discovered**: Sway's systemd service PATH doesn't include Nix profile dirs. ALL Nix-installed binaries (foot, wofi, thunar, code, clipman, swaynag, swaymsg, idea-community) were unfindable from keybindings.
+- **Fix**: Added `$nix` variable (`/home/user/.nix-profile/bin`) in sway config, all exec commands now use full paths
+- **Antigravity crash (code 4)**: Electron app was trying X11 backend (`Missing X server or $DISPLAY`). Fixed with `--no-sandbox --ozone-platform=wayland` flags. Xwayland also started for X11 apps.
+- **VS Code**: Same Electron fix applied (`--no-sandbox --ozone-platform=wayland`)
+- **GPU N/A in status bar**: sway-status script used bare `nvidia-smi` which wasn't in PATH. Fixed to `/var/lib/nvidia/bin/nvidia-smi`. GPU now shows T4 temp + utilization.
+- **NVIDIA libs system-wide**: Added `/var/lib/nvidia/lib64` to `/etc/ld.so.conf.d/nvidia.conf` and ran ldconfig. All apps can now find CUDA/nvidia libs without LD_LIBRARY_PATH.
+- **floating_modifier**: Changed from `Ctrl+Shift` (invalid — sway only accepts single modifier) to `Mod4`
+- **sway-desktop.service**: Updated with `LD_LIBRARY_PATH=/var/lib/nvidia/lib64`
+
 ### Next Steps
 - F-0023: Create comprehensive setup guide for recreating workstation from scratch
 - F-0019: Post-reboot E2E validation (Milestone 2 carryover)
+- Persist nvidia ldconfig fix in Docker image startup scripts (ephemeral disk)
