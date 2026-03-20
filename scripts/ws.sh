@@ -1,0 +1,417 @@
+#!/bin/bash
+# =============================================================================
+# Cloud Workstation — Setup & Teardown
+# =============================================================================
+# Single script for both setup and teardown of a GPU Cloud Workstation.
+#
+# Usage:
+#   bash scripts/ws.sh setup    -p PROJECT_ID [-w WEBHOOK] [-e EMAIL]
+#   bash scripts/ws.sh teardown -p PROJECT_ID [-w WEBHOOK] [-e EMAIL] [-y]
+#
+# Requirements:
+#   - gcloud CLI authenticated with Owner role on the target project
+#   - NVIDIA T4 GPU quota in us-west1 (at least 1)
+# =============================================================================
+
+set -euo pipefail
+
+REGION="us-west1"
+REPO_URL="https://github.com/ameer00/cloud-workstations.git"
+CLUSTER="workstation-cluster"
+CONFIG="ws-config"
+WORKSTATION="dev-workstation"
+AR_REPO="workstation-images"
+
+usage() {
+    echo "Usage:"
+    echo "  bash scripts/ws.sh setup    -p PROJECT_ID [-w WEBHOOK_URL] [-e EMAIL]"
+    echo "  bash scripts/ws.sh teardown -p PROJECT_ID [-w WEBHOOK_URL] [-e EMAIL] [-y]"
+    echo ""
+    echo "Commands:"
+    echo "  setup      Create a GPU Cloud Workstation (runs in Cloud Build)"
+    echo "  teardown   Delete all Cloud Workstation resources"
+    echo ""
+    echo "Required:"
+    echo "  -p, --project PROJECT_ID    GCP project ID"
+    echo ""
+    echo "Optional:"
+    echo "  -w, --webhook URL           Google Chat / Slack webhook for notifications"
+    echo "  -e, --email EMAIL           Email address for notifications"
+    echo "  -y, --yes                   Skip confirmation (teardown only)"
+    exit 1
+}
+
+# --- Parse command ---
+COMMAND="${1:-}"
+if [ -z "$COMMAND" ] || [[ "$COMMAND" == -* ]]; then
+    echo "ERROR: First argument must be 'setup' or 'teardown'"
+    echo ""
+    usage
+fi
+shift
+
+if [ "$COMMAND" != "setup" ] && [ "$COMMAND" != "teardown" ]; then
+    echo "ERROR: Unknown command '$COMMAND'. Use 'setup' or 'teardown'."
+    echo ""
+    usage
+fi
+
+# --- Parse flags ---
+PROJECT_ID=""
+WEBHOOK_URL=""
+EMAIL=""
+SKIP_CONFIRM=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -p|--project) PROJECT_ID="$2"; shift 2 ;;
+        -w|--webhook) WEBHOOK_URL="$2"; shift 2 ;;
+        -e|--email)   EMAIL="$2"; shift 2 ;;
+        -y|--yes)     SKIP_CONFIRM=true; shift ;;
+        -h|--help)    usage ;;
+        *) echo "Unknown option: $1"; usage ;;
+    esac
+done
+
+if [ -z "$PROJECT_ID" ]; then
+    echo "ERROR: --project is required"
+    usage
+fi
+
+log() { echo "[$(date '+%H:%M:%S')] $1"; }
+
+notify_webhook() {
+    [ -z "$WEBHOOK_URL" ] && return 0
+    local title="$1" subtitle="$2" body="$3"
+    curl -s -X POST "$WEBHOOK_URL" \
+        -H 'Content-Type: application/json' \
+        -d "{
+            \"cards\": [{
+                \"header\": {\"title\": \"${title}\", \"subtitle\": \"${subtitle}\"},
+                \"sections\": [{\"widgets\": [{\"textParagraph\": {\"text\": \"${body}\"}}]}]
+            }]
+        }" >/dev/null 2>&1 || true
+}
+
+notify_email() {
+    [ -z "$EMAIL" ] || [ -z "$EMAIL_FUNCTION_URL" ] && return 0
+    local subject="$1" body="$2"
+    curl -s -X POST "$EMAIL_FUNCTION_URL" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: bearer $(gcloud auth print-identity-token 2>/dev/null || echo '')" \
+        -d "{\"to\": \"${EMAIL}\", \"subject\": \"${subject}\", \"body\": \"${body}\"}" \
+        >/dev/null 2>&1 || true
+}
+
+notify_all() {
+    local title="$1" subtitle="$2" body="$3"
+    notify_webhook "$title" "$subtitle" "$body"
+    notify_email "$title — $subtitle" "$body"
+}
+
+# =========================================================================
+# PRE-FLIGHT CHECKS (shared by setup and teardown)
+# =========================================================================
+echo "============================================="
+echo " Cloud Workstation — ${COMMAND^^}"
+echo " Project: $PROJECT_ID"
+echo " Region:  $REGION"
+[ -n "$WEBHOOK_URL" ] && echo " Webhook: enabled"
+[ -n "$EMAIL" ] && echo " Email:   $EMAIL"
+echo "============================================="
+echo ""
+
+log "Validating authentication..."
+ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null || true)
+if [ -z "$ACCOUNT" ]; then
+    echo "ERROR: No active gcloud account. Run: gcloud auth login"
+    exit 1
+fi
+log "  Authenticated as: $ACCOUNT"
+
+log "Validating project..."
+if ! gcloud projects describe "$PROJECT_ID" >/dev/null 2>&1; then
+    echo "ERROR: Project '$PROJECT_ID' not found or you don't have access."
+    exit 1
+fi
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
+log "  Project number: $PROJECT_NUMBER"
+
+EMAIL_FUNCTION_URL=""
+
+# =========================================================================
+# SETUP
+# =========================================================================
+if [ "$COMMAND" = "setup" ]; then
+
+    # --- Deploy email notification function (if --email provided) ---
+    if [ -n "$EMAIL" ]; then
+        log "Deploying email notification function..."
+        gcloud services enable cloudfunctions.googleapis.com run.googleapis.com --project="$PROJECT_ID" --quiet 2>/dev/null
+
+        # Get script directory (works whether run from repo or after clone)
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        FUNC_DIR="${SCRIPT_DIR}/email-notify"
+
+        if [ -d "$FUNC_DIR" ]; then
+            gcloud functions deploy ws-email-notify \
+                --gen2 \
+                --runtime=python312 \
+                --region="$REGION" \
+                --source="$FUNC_DIR" \
+                --entry-point=notify \
+                --trigger-http \
+                --allow-unauthenticated \
+                --project="$PROJECT_ID" \
+                --quiet 2>/dev/null || log "  WARNING: Email function deployment failed — webhook only"
+
+            EMAIL_FUNCTION_URL=$(gcloud functions describe ws-email-notify \
+                --gen2 --region="$REGION" --project="$PROJECT_ID" \
+                --format="value(serviceConfig.uri)" 2>/dev/null || echo "")
+
+            if [ -n "$EMAIL_FUNCTION_URL" ]; then
+                log "  Email function deployed: $EMAIL_FUNCTION_URL"
+                # Send test email
+                notify_email "Cloud Workstation — Test" "Email notifications are working for project ${PROJECT_ID}."
+                log "  Test email sent to $EMAIL"
+            else
+                log "  WARNING: Could not get function URL — email notifications disabled"
+            fi
+        else
+            log "  WARNING: email-notify/ directory not found at $FUNC_DIR — email notifications disabled"
+        fi
+    fi
+
+    # --- Enable Cloud Build API ---
+    log "Enabling Cloud Build API..."
+    gcloud services enable cloudbuild.googleapis.com --project="$PROJECT_ID" --quiet 2>/dev/null
+
+    # --- Grant Cloud Build SA Owner role ---
+    log "Granting Cloud Build SA Owner role..."
+    CB_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+    if gcloud projects get-iam-policy "$PROJECT_ID" --format=json 2>/dev/null | grep -q "$CB_SA"; then
+        log "  Already configured"
+    else
+        gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+            --member="serviceAccount:${CB_SA}" \
+            --role="roles/owner" \
+            --quiet >/dev/null 2>&1
+        log "  Granted Owner role to $CB_SA"
+    fi
+
+    # --- Submit Cloud Build job ---
+    echo ""
+    log "Submitting Cloud Build job..."
+    echo ""
+    echo "  This will create your complete Cloud Workstation:"
+    echo "    APIs, Artifact Registry, Docker image, Cloud NAT,"
+    echo "    Workstation cluster + config, Nix, fonts, ZSH,"
+    echo "    Starship, dev tools, Cloud Scheduler"
+    echo ""
+    echo "  You can safely close this terminal after submission."
+    echo ""
+
+    # Build substitutions
+    SUBS="_REPO_URL=${REPO_URL},_REGION=${REGION}"
+    [ -n "$WEBHOOK_URL" ] && SUBS="${SUBS},_WEBHOOK_URL=${WEBHOOK_URL}"
+    [ -n "$EMAIL_FUNCTION_URL" ] && SUBS="${SUBS},_EMAIL_FUNC_URL=${EMAIL_FUNCTION_URL},_EMAIL=${EMAIL}"
+
+    TMPDIR=$(mktemp -d)
+    cat > "${TMPDIR}/cloudbuild.yaml" << 'BUILDEOF'
+steps:
+  - name: 'gcr.io/cloud-builders/git'
+    args: ['clone', '${_REPO_URL}', '/workspace/repo']
+    id: 'clone-repo'
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cd /workspace/repo
+        bash scripts/cloud-build-setup.sh "${PROJECT_ID}" "${_REGION}" "${_WEBHOOK_URL}" "${_EMAIL_FUNC_URL}" "${_EMAIL}"
+    id: 'run-setup'
+    waitFor: ['clone-repo']
+
+timeout: 7200s
+substitutions:
+  _REPO_URL: 'https://github.com/ameer00/cloud-workstations.git'
+  _REGION: 'us-west1'
+  _WEBHOOK_URL: ''
+  _EMAIL_FUNC_URL: ''
+  _EMAIL: ''
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+BUILDEOF
+
+    BUILD_OUTPUT=$(gcloud builds submit \
+        --config="${TMPDIR}/cloudbuild.yaml" \
+        --project="$PROJECT_ID" \
+        --region="$REGION" \
+        --no-source \
+        --substitutions="${SUBS}" \
+        --async 2>&1)
+
+    rm -rf "$TMPDIR"
+
+    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -oP 'builds/\K[a-f0-9-]+' | head -1)
+
+    if [ -z "$BUILD_ID" ]; then
+        echo "ERROR: Failed to submit build. Output:"
+        echo "$BUILD_OUTPUT"
+        exit 1
+    fi
+
+    CONSOLE_URL="https://console.cloud.google.com/cloud-build/builds;region=${REGION}/${BUILD_ID}?project=${PROJECT_ID}"
+
+    notify_all "Setup Started" "Project: ${PROJECT_ID}" \
+        "Build ID: <b>${BUILD_ID}</b><br>You'll be notified when it completes.<br><br><a href=\"${CONSOLE_URL}\">View Build</a>"
+
+    echo "============================================="
+    echo " Build submitted successfully!"
+    echo "============================================="
+    echo ""
+    echo " Build ID: $BUILD_ID"
+    echo ""
+    echo " Track progress:"
+    echo "   Console: $CONSOLE_URL"
+    echo "   CLI:     gcloud builds log ${BUILD_ID} --stream --project=${PROJECT_ID} --region=${REGION}"
+    echo ""
+    [ -n "$WEBHOOK_URL" ] && echo " Google Chat: notifications enabled"
+    [ -n "$EMAIL" ] && echo " Email: notifications to $EMAIL"
+    echo ""
+    echo " You can safely close this terminal now."
+    echo "============================================="
+
+# =========================================================================
+# TEARDOWN
+# =========================================================================
+elif [ "$COMMAND" = "teardown" ]; then
+
+    echo " This will DELETE the following resources:"
+    echo "   - Workstation: $WORKSTATION"
+    echo "   - Workstation Config: $CONFIG"
+    echo "   - Workstation Cluster: $CLUSTER"
+    echo "   - Artifact Registry: $AR_REPO (and all images)"
+    echo "   - Cloud NAT: ws-nat + Cloud Router: ws-router"
+    echo "   - Cloud Scheduler: ws-daily-start"
+    echo "   - Cloud Function: ws-email-notify (if exists)"
+    echo ""
+
+    if [ "$SKIP_CONFIRM" = false ]; then
+        read -p "Are you sure? This cannot be undone. (yes/no): " CONFIRM
+        if [ "$CONFIRM" != "yes" ]; then
+            echo "Aborted."
+            exit 0
+        fi
+    fi
+
+    echo ""
+    notify_all "Teardown Started" "Project: ${PROJECT_ID}" "Deleting all Cloud Workstation resources..."
+
+    # 1. Delete Workstation
+    log "Deleting workstation..."
+    if gcloud workstations describe "$WORKSTATION" \
+        --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
+        --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud workstations stop "$WORKSTATION" \
+            --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
+            --project="$PROJECT_ID" --quiet 2>/dev/null || true
+        gcloud workstations delete "$WORKSTATION" \
+            --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
+            --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    # 2. Delete Config
+    log "Deleting config..."
+    if gcloud workstations configs describe "$CONFIG" \
+        --cluster="$CLUSTER" --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud workstations configs delete "$CONFIG" \
+            --cluster="$CLUSTER" --region="$REGION" \
+            --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    # 3. Delete Cluster
+    log "Deleting cluster (5-10 minutes)..."
+    if gcloud workstations clusters describe "$CLUSTER" \
+        --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud workstations clusters delete "$CLUSTER" \
+            --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    # 4. Delete Artifact Registry
+    log "Deleting Artifact Registry..."
+    if gcloud artifacts repositories describe "$AR_REPO" \
+        --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud artifacts repositories delete "$AR_REPO" \
+            --location="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    # 5. Delete Cloud NAT
+    log "Deleting Cloud NAT..."
+    if gcloud compute routers nats describe ws-nat \
+        --router=ws-router --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud compute routers nats delete ws-nat \
+            --router=ws-router --region="$REGION" \
+            --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    # 6. Delete Cloud Router
+    log "Deleting Cloud Router..."
+    if gcloud compute routers describe ws-router \
+        --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud compute routers delete ws-router \
+            --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    # 7. Delete Cloud Scheduler
+    log "Deleting Cloud Scheduler..."
+    if gcloud scheduler jobs describe ws-daily-start \
+        --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud scheduler jobs delete ws-daily-start \
+            --location="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    # 8. Delete email notification function
+    log "Deleting email function..."
+    if gcloud functions describe ws-email-notify \
+        --gen2 --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+        gcloud functions delete ws-email-notify \
+            --gen2 --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+        log "  Deleted"
+    else
+        log "  Not found — skipping"
+    fi
+
+    echo ""
+    echo "============================================="
+    echo " Teardown complete!"
+    echo "============================================="
+    echo ""
+    echo " All Cloud Workstation resources deleted."
+    echo " To set up again: bash scripts/ws.sh setup -p $PROJECT_ID"
+    echo "============================================="
+
+    notify_all "Teardown Complete" "Project: ${PROJECT_ID}" "All Cloud Workstation resources deleted."
+fi

@@ -8,9 +8,11 @@
 
 set -euo pipefail
 
-PROJECT_ID="${1:?Usage: cloud-build-setup.sh PROJECT_ID REGION [WEBHOOK_URL]}"
+PROJECT_ID="${1:?Usage: cloud-build-setup.sh PROJECT_ID REGION [WEBHOOK_URL] [EMAIL_FUNC_URL] [EMAIL]}"
 REGION="${2:-us-west1}"
 WEBHOOK_URL="${3:-}"
+EMAIL_FUNC_URL="${4:-}"
+EMAIL="${5:-}"
 CLUSTER="workstation-cluster"
 CONFIG="ws-config"
 WORKSTATION="dev-workstation"
@@ -24,9 +26,9 @@ log()  { echo "[$(date '+%H:%M:%S')] $1"; }
 step() { echo ""; echo "========================================"; echo "  $1"; echo "========================================"; }
 
 # Send Google Chat / Slack webhook notification
-notify() {
-    local title="$1" subtitle="$2" body="$3" color="${4:-#9ece6a}"
+notify_webhook() {
     [ -z "$WEBHOOK_URL" ] && return 0
+    local title="$1" subtitle="$2" body="$3"
     curl -s -X POST "$WEBHOOK_URL" \
         -H 'Content-Type: application/json' \
         -d "{
@@ -42,6 +44,23 @@ notify() {
                 }]
             }]
         }" >/dev/null 2>&1 || true
+}
+
+# Send email notification via Cloud Function
+notify_email() {
+    [ -z "$EMAIL_FUNC_URL" ] || [ -z "$EMAIL" ] && return 0
+    local subject="$1" body="$2"
+    curl -s -X POST "$EMAIL_FUNC_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"to\": \"${EMAIL}\", \"subject\": \"${subject}\", \"body\": \"${body}\"}" \
+        >/dev/null 2>&1 || true
+}
+
+# Send to all configured channels
+notify() {
+    local title="$1" subtitle="$2" body="$3"
+    notify_webhook "$title" "$subtitle" "$body"
+    notify_email "$title — $subtitle" "$body"
 }
 
 # Send failure notification and exit

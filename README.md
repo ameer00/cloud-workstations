@@ -23,32 +23,40 @@ gcloud auth login
 ```bash
 git clone https://github.com/ameer00/cloud-workstations.git
 cd cloud-workstations
-bash scripts/setup.sh -p YOUR_PROJECT_ID
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID
 ```
 
 Replace `YOUR_PROJECT_ID` with your GCP project ID.
 
 **You can close your terminal immediately after the script prints the build ID.** All work runs inside Cloud Build and will continue independently.
 
-### Step 3 (optional): Get notified via Google Chat
+### Step 3 (optional): Get notified when it's done
 
-To receive progress updates and a notification when setup completes or fails:
+#### Google Chat webhook
 
-1. Open [Google Chat](https://chat.google.com)
-2. Create a new Space (e.g. "Workstation Alerts")
-3. Click the space name → **Apps & integrations** → **Manage webhooks**
-4. Create a webhook, copy the URL
-5. Pass it to the setup script:
+1. Open [Google Chat](https://chat.google.com) → Create a Space → Space name → **Apps & integrations** → **Manage webhooks** → Copy URL
 
 ```bash
-bash scripts/setup.sh -p YOUR_PROJECT_ID -w "YOUR_WEBHOOK_URL"
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID -w "YOUR_WEBHOOK_URL"
 ```
 
-You'll receive Google Chat messages at each milestone:
-- Build started (with link to Cloud Console)
-- Docker image built
-- Workstation running
-- Setup complete (with workstation URL) or failed (with error details)
+#### Email
+
+```bash
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID -e "you@example.com"
+```
+
+#### Both
+
+```bash
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID -w "YOUR_WEBHOOK_URL" -e "you@example.com"
+```
+
+You'll receive notifications when:
+- Build starts (with link to Cloud Console)
+- Docker image is built
+- Workstation is running
+- Setup completes (with workstation URL) or fails (with error details)
 
 ### Track progress
 
@@ -132,7 +140,7 @@ All shortcuts use `CTRL+SHIFT` as the modifier (works through noVNC in browser).
 The setup is fully **idempotent**. If it fails or you want to update, just run it again:
 
 ```bash
-bash scripts/setup.sh -p YOUR_PROJECT_ID
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID
 ```
 
 Existing resources are detected and skipped. Only missing components are created.
@@ -142,10 +150,10 @@ Existing resources are detected and skipped. Only missing components are created
 To delete **all** resources created by setup (workstation, cluster, images, NAT, scheduler):
 
 ```bash
-bash scripts/teardown.sh -p YOUR_PROJECT_ID
+bash scripts/ws.sh teardown -p YOUR_PROJECT_ID
 ```
 
-Add `-y` to skip the confirmation prompt. Add `--webhook` for notifications.
+Add `-y` to skip the confirmation prompt. Add `-w` / `-e` for notifications.
 
 This is useful for:
 - Testing setup from scratch
