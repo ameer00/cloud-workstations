@@ -12,7 +12,13 @@ The Cloud Workstation currently uses the default bash shell with default fonts a
 
 ## Requirements
 
-1. **R1 — Install Nerd Fonts:** Install CascadiaCode (CaskaydiaCove Nerd Font) and FiraCode (FiraCode Nerd Font) to `~/.local/share/fonts` via direct download from the [Nerd Fonts GitHub releases](https://github.com/ryanoasis/nerd-fonts/releases). Extract the font files and run `fc-cache -fv` to rebuild the font cache.
+1. **R1 — Install Fonts from dev-fonts/ directory:** Install ALL fonts from the `dev-fonts/` directory in the repo to `~/.local/share/fonts/` on the workstation. This includes:
+   - **CascadiaCode** (`dev-fonts/CascadiaCode/`) — Full CascadiaCode family (OTF + TTF, variable + static)
+   - **CaskaydiaCove Nerd Font** (`dev-fonts/CaskaydiaCove/`) — Bold, ExtraLight, Light, Regular, SemiBold, SemiLight
+   - **FiraCodeiScript** (`dev-fonts/FiraCodeiScript/`) — FiraCode + Script italic variant (Bold, Italic, Regular TTF)
+   - **Operator Mono** (`dev-fonts/Operator-Mono/Fonts/` and `dev-fonts/dev-fonts/`) — Multiple weights
+
+   Copy all `.otf` and `.ttf` files from the entire `dev-fonts/` directory tree to `~/.local/share/fonts/`. Fonts are already in the repo — no need to download from GitHub releases. Run `fc-cache -fv` after copying to rebuild the font cache.
 
 2. **R2 — Make ZSH the default shell:** Set ZSH as the default shell. Since `chsh` may not work in a container environment, add `exec zsh` to `.bashrc` as a fallback mechanism. Ensure that opening the foot terminal launches ZSH, not bash.
 
@@ -22,15 +28,15 @@ The Cloud Workstation currently uses the default bash shell with default fonts a
 
 5. **R5 — Install Starship prompt:** Install Starship via Nix (preferred) or via the curl installer to `~/.local/bin`. Add `eval "$(starship init zsh)"` to `.zshrc`. Use the default Starship config or a minimal config.
 
-6. **R6 — Configure foot terminal font:** Set the foot terminal font to `CaskaydiaCove Nerd Font:size=18` in `~/.config/foot/foot.ini`. Note: The CascadiaCode Nerd Font is named "CaskaydiaCove Nerd Font" in the actual font files due to Nerd Fonts naming conventions.
+6. **R6 — Configure foot terminal font:** Set the foot terminal font to `Operator Mono Book:size=18` (with `Operator Mono Light:size=18` as fallback) in `~/.config/foot/foot.ini`. Use `font=Operator Mono Book:size=18` as the primary font setting.
 
 ## Acceptance Criteria
 
-- [ ] AC1: `fc-list` shows CaskaydiaCove and FiraCode Nerd Font families installed
+- [ ] AC1: `fc-list` shows Operator Mono, CascadiaCode, CaskaydiaCove, and FiraCodeiScript font families
 - [ ] AC2: Opening foot terminal launches ZSH (not bash) — verified by `echo $SHELL` or `echo $0`
 - [ ] AC3: ZSH has syntax highlighting (valid commands colored green, invalid red) and autosuggestions (grey ghost text from history)
 - [ ] AC4: Starship prompt is visible in the terminal (shows directory, git status, etc.)
-- [ ] AC5: Terminal font is CaskaydiaCove Nerd Font at size 18 — verified visually and in foot.ini config
+- [ ] AC5: Terminal font is Operator Mono at size 18 — verified visually and in foot.ini config
 - [ ] AC6: No plugin manager used — plugins are plain git clones in `~/.zsh/` sourced directly in `.zshrc`
 
 ## Out of Scope
