@@ -103,14 +103,14 @@ bindsym $mod+e exec $nix/thunar
 # Web Browser (Google Chrome)
 bindsym $mod+b exec google-chrome-stable
 
-# Antigravity (Electron app — needs Wayland backend + no-sandbox in container)
-bindsym $mod+n exec /home/user/.antigravity/antigravity/antigravity --no-sandbox --ozone-platform=wayland
+# Antigravity (Electron app — Wayland backend, no-sandbox, disable-gpu for VNC)
+bindsym $mod+n exec /home/user/.antigravity/antigravity/antigravity --no-sandbox --ozone-platform=wayland --disable-gpu
 
 # IntelliJ IDEA Community
 bindsym $mod+m exec $nix/idea-community
 
-# VS Code (Electron app — needs Wayland backend + no-sandbox in container)
-bindsym $mod+y exec $nix/code --no-sandbox --ozone-platform=wayland
+# VS Code (Electron app — Wayland backend, no-sandbox, disable-gpu for VNC)
+bindsym $mod+y exec $nix/code --no-sandbox --ozone-platform=wayland --disable-gpu
 
 # Clipboard history picker (clipman)
 bindsym $mod+a exec $nix/clipman pick --tool $nix/wofi
