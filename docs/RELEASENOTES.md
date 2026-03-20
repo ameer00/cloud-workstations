@@ -1,5 +1,21 @@
 # Release Notes — Cloud Workstation
 
+## v1.3 — Documentation, Validation, and Sway Boot Fix (2026-03-20)
+
+### Added
+- **Comprehensive setup guide** (`docs/SETUP.md`, 1,137 lines) — 14-section step-by-step guide to recreate the entire Cloud Workstation from scratch, usable by humans and AI agents
+- **Sway auto-start on boot** (`300_setup-sway-desktop.sh`) — startup script creates sway-desktop + wayvnc systemd services on every boot, disables TigerVNC, adds nvidia ldconfig
+
+### Fixed
+- **GNOME starting instead of Sway on reboot** — Sway/wayvnc services were on ephemeral disk and lost on restart. New startup script recreates them before systemd boots
+- **nvidia-smi LD_LIBRARY_PATH** — ldconfig now runs on boot to make nvidia libs available system-wide without manual env vars
+
+### Verified
+- **Post-reboot E2E validation** (33 PASS, 1 WARN, 0 FAIL):
+  - All 17 Nix apps, 2 AI CLI tools, GPU (Tesla T4), Antigravity, Nix store (8,346 packages), persistent disk (479GB free), all configs intact after stop/start cycle
+
+---
+
 ## v1.2 — Modern Desktop (Tokyo Night) (2026-03-20)
 
 ### Added

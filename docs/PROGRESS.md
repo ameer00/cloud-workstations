@@ -190,3 +190,47 @@
 - F-0023: Create comprehensive setup guide for recreating workstation from scratch
 - F-0019: Post-reboot E2E validation (Milestone 2 carryover)
 - Persist nvidia ldconfig fix in Docker image startup scripts (ephemeral disk)
+
+---
+
+## Session 5 — 2026-03-20
+
+### Goals
+- Complete remaining open items: F-0019 (Post-reboot E2E validation), F-0023 (Comprehensive setup documentation)
+- Fix Sway not starting on boot (F-0025)
+
+### Completed
+- **F-0019** (Post-reboot E2E validation): SWE-QA validated all components after workstation stop/start cycle.
+  - 33 PASS, 1 WARN, 0 FAIL
+  - All 17 Nix apps verified (nvim 0.11.6, tmux 3.6a, zsh 5.9, ffmpeg 8.0.1, Chromium 146, Chrome 146, VSCode 1.111.0, foot 1.26.1, sway 1.11, waybar 0.15.0, wofi 1.5.3, thunar 4.20.7, node 22.22.1, rg 15.1.0, fd 10.4.2, jq 1.8.1, tree 2.3.1)
+  - AI tools: Claude Code 2.1.80, Gemini CLI 0.34.0
+  - GPU: Tesla T4, Driver 535.288.01, CUDA 12.2 (WARN: nvidia-smi needs LD_LIBRARY_PATH in non-login shells)
+  - Nix store: 8,346 packages on persistent disk (symlink /nix → /home/user/nix)
+  - Antigravity binary: 199MB at ~/.antigravity/antigravity/antigravity
+  - Persistent disk: 492G total, 13G used, 479G available (3%)
+  - Configs: home.nix, sway config, sway-status, init.lua all present and functional
+
+- **F-0023** (Comprehensive setup documentation): SWE-3 created `docs/SETUP.md` (1,137 lines, 14 sections).
+  - Prerequisites, Infrastructure, Docker Image, Workstation Config, Nix, Home Manager, Sway Desktop, App Config, AI CLI Tools, Antigravity, GPU Setup, Troubleshooting (10 issues), Architecture Reference
+  - Includes actual gcloud commands, full config files, keybinding tables, ASCII architecture diagram
+
+- **F-0025** (Sway auto-start on boot): SWE-1 created `workstation-image/assets/etc/workstation-startup.d/300_setup-sway-desktop.sh`.
+  - Creates sway-desktop.service and wayvnc.service on every boot (ephemeral disk)
+  - Disables TigerVNC (port 5901 conflict), keeps noVNC (proxies port 80 → 5901)
+  - Adds nvidia ldconfig (/var/lib/nvidia/lib64 → /etc/ld.so.conf.d/nvidia.conf)
+  - Deployed to running workstation and verified: Sway active, wayvnc on 5901, swaymsg responding
+
+### Issues Found and Fixed
+1. **Workstation was stopped** — SWE-QA started it automatically before running validation
+2. **GNOME running instead of Sway** — TigerVNC/GNOME services baked into Docker image; Sway services were on ephemeral disk. Fixed by F-0025 startup script
+3. **nvidia-smi LD_LIBRARY_PATH** — Non-login shells can't find libnvidia-ml.so. Fixed by F-0025 startup script (ldconfig)
+
+### Decisions
+- Used in-process background agents (tmux panes too small for interactive teams)
+- F-0025 added as P0 bug fix when PO noticed GNOME instead of Sway after reboot
+- Startup script approach (not Docker rebuild) for fast deployment; script in repo for next image build
+
+### Next Steps
+- Rebuild Docker image to include 300_setup-sway-desktop.sh natively
+- All milestones 1-3 items complete (F-0001 through F-0025)
+- Tag v1.3 release after PO approval
