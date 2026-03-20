@@ -374,3 +374,47 @@
 - Reboot workstation to verify full bootstrap flow end-to-end
 - Tag v1.4 release after PO approval
 - Backlog is empty — await next PO direction
+
+---
+
+## Session 8b — 2026-03-20
+
+### Goals
+- Fix workspace auto-launch timing (apps not appearing on noVNC login)
+- Fix TigerVNC overlay filesystem masking bug
+- Build Milestone 5: One-click setup via Cloud Build
+
+### Completed
+
+- **Workspace auto-launch fixed (F-0029)**:
+  - Root cause: 08-workspaces.sh ran from setup.sh during entrypoint (before systemd), but Sway starts as a systemd service after entrypoint
+  - Fix: Created `ws-autolaunch.service` in 03-sway.sh that runs 08-workspaces.sh after wayvnc.service
+  - Excluded 08-workspaces.sh from setup.sh (runs via systemd now)
+  - Fixed workspace assignment: replaced fixed sleep with window-count polling (waits for window to appear before switching workspace)
+  - Reboot verified: ws1=foot, ws2=chrome, ws3=antigravity, ws4=foot
+
+- **TigerVNC overlay fix**:
+  - `ln -sf /dev/null` fails on container overlay fs with regular files
+  - Fixed to `rm -f` then `ln -s` in both 300_setup-sway-desktop.sh and 03-sway.sh
+  - Docker image rebuilt (sha256:7b785b48) with fix + 000_bootstrap.sh
+  - Reboot verified: TigerVNC masked, wayvnc on port 5901
+
+- **Milestone 5: One-click setup (F-0034 through F-0037)**:
+  - `scripts/setup.sh` — Launcher script (~80 lines): parses -p PROJECT_ID, validates auth/Owner, enables Cloud Build, grants SA Owner role, submits build async
+  - `scripts/cloud-build-setup.sh` — Main setup (~350 lines): 15 idempotent steps with retry logic (retry up to 3x with delays), self-recovery, and built-in verification tests (PASS/FAIL/WARN counters)
+  - Steps: Enable APIs → AR → Docker build → Cloud NAT → Cluster → IAM → Config → Workstation → Nix → Home Manager → Boot scripts/fonts → Configs → Initial setup → AI tools → Cloud Scheduler
+  - `README.md` — Quick start guide for colleagues
+  - `docs/specs/F-0034-one-click-setup.md` — Full spec
+
+- **GitHub repo**: All changes pushed to https://github.com/ameer00/cloud-workstations
+
+### Decisions
+- Cloud Build as execution engine (not Cloud Shell) — persistent, survives terminal close
+- setup.sh uses --async so user can close terminal immediately
+- cloud-build-setup.sh runs nested Cloud Build for Docker image (build-within-build)
+- All steps idempotent with resource_exists checks
+- Built-in test suite validates each step (PASS/FAIL/WARN)
+
+### Next Steps
+- E2E test one-click setup on a clean project (F-0038)
+- Tag v1.5 after PO approval

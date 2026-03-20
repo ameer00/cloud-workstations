@@ -78,6 +78,18 @@
 
 ---
 
+## Milestone 5: One-Click Setup
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0034 | Launcher script (setup.sh) | F-0034 | P0 | done | SWE-1 | — | — | scripts/setup.sh: Parses -p PROJECT_ID, validates auth, enables Cloud Build, grants SA Owner, submits build async, prints tracking URL |
+| F-0035 | Cloud Build setup script | F-0034 | P0 | done | PE | — | F-0034 | scripts/cloud-build-setup.sh: 15-step idempotent setup with retry logic, self-recovery, and built-in verification tests (PASS/FAIL/WARN) |
+| F-0036 | Nix + Home Manager install | F-0034 | P0 | done | SWE-2 | — | F-0035 | Integrated into cloud-build-setup.sh steps 9-10: Nix install, persistent disk, Home Manager, all packages |
+| F-0037 | Config + AI tools deployment | F-0034 | P0 | done | SWE-3 | — | F-0036 | Integrated into cloud-build-setup.sh steps 11-14: boot scripts, fonts, Sway config, ZSH, Starship, Claude Code, Gemini, Antigravity |
+| F-0038 | E2E test of one-click setup | F-0034 | P0 | backlog | SWE-QA | — | F-0034 thru F-0037 | Test full setup on a clean project, verify all features work |
+
+---
+
 ## Future Items
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
