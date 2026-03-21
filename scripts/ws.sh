@@ -143,17 +143,28 @@ EMAIL_FUNCTION_URL=""
 # =========================================================================
 if [ "$COMMAND" = "setup" ]; then
 
+    # --- Ensure default VPC network exists ---
+    log "Checking default VPC network..."
+    if gcloud compute networks describe default --project="$PROJECT_ID" >/dev/null 2>&1; then
+        log "  Default network exists"
+    else
+        log "  Creating default network..."
+        gcloud compute networks create default \
+            --subnet-mode=auto --project="$PROJECT_ID" --quiet 2>&1 | head -3
+        log "  Default network created"
+    fi
+
     # --- Deploy email notification function (if --email provided) ---
     if [ -n "$EMAIL" ]; then
         log "Deploying email notification function..."
-        gcloud services enable cloudfunctions.googleapis.com run.googleapis.com --project="$PROJECT_ID" --quiet 2>/dev/null
+        gcloud services enable cloudfunctions.googleapis.com run.googleapis.com \
+            --project="$PROJECT_ID" --quiet 2>/dev/null
 
-        # Get script directory (works whether run from repo or after clone)
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         FUNC_DIR="${SCRIPT_DIR}/email-notify"
 
         if [ -d "$FUNC_DIR" ]; then
-            gcloud functions deploy ws-email-notify \
+            if gcloud functions deploy ws-email-notify \
                 --gen2 \
                 --runtime=python312 \
                 --region="$REGION" \
@@ -162,19 +173,19 @@ if [ "$COMMAND" = "setup" ]; then
                 --trigger-http \
                 --allow-unauthenticated \
                 --project="$PROJECT_ID" \
-                --quiet 2>/dev/null || log "  WARNING: Email function deployment failed — webhook only"
-
-            EMAIL_FUNCTION_URL=$(gcloud functions describe ws-email-notify \
-                --gen2 --region="$REGION" --project="$PROJECT_ID" \
-                --format="value(serviceConfig.uri)" 2>/dev/null || echo "")
-
-            if [ -n "$EMAIL_FUNCTION_URL" ]; then
-                log "  Email function deployed: $EMAIL_FUNCTION_URL"
-                # Send test email
-                notify_email "Cloud Workstation — Test" "Email notifications are working for project ${PROJECT_ID}."
-                log "  Test email sent to $EMAIL"
+                --quiet 2>&1 | tail -3; then
+                EMAIL_FUNCTION_URL=$(gcloud functions describe ws-email-notify \
+                    --gen2 --region="$REGION" --project="$PROJECT_ID" \
+                    --format="value(serviceConfig.uri)" 2>/dev/null || echo "")
+                if [ -n "$EMAIL_FUNCTION_URL" ]; then
+                    log "  Email function deployed: $EMAIL_FUNCTION_URL"
+                    notify_email "Cloud Workstation — Test" "Email notifications are working for project ${PROJECT_ID}."
+                    log "  Test email sent to $EMAIL"
+                else
+                    log "  WARNING: Could not get function URL — email notifications disabled"
+                fi
             else
-                log "  WARNING: Could not get function URL — email notifications disabled"
+                log "  WARNING: Email function deployment failed — webhook only"
             fi
         else
             log "  WARNING: email-notify/ directory not found at $FUNC_DIR — email notifications disabled"
@@ -185,18 +196,27 @@ if [ "$COMMAND" = "setup" ]; then
     log "Enabling Cloud Build API..."
     gcloud services enable cloudbuild.googleapis.com --project="$PROJECT_ID" --quiet 2>/dev/null
 
-    # --- Grant Cloud Build SA Owner role ---
-    log "Granting Cloud Build SA Owner role..."
+    # --- Grant required IAM roles to build service accounts ---
+    # Newer GCP projects use the Compute Engine default SA for Cloud Build.
+    # Grant Owner + Logs Writer to both the legacy Cloud Build SA and Compute SA.
+    log "Configuring build service account permissions..."
     CB_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
-    if gcloud projects get-iam-policy "$PROJECT_ID" --format=json 2>/dev/null | grep -q "$CB_SA"; then
-        log "  Already configured"
-    else
-        gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-            --member="serviceAccount:${CB_SA}" \
-            --role="roles/owner" \
-            --quiet >/dev/null 2>&1
-        log "  Granted Owner role to $CB_SA"
-    fi
+    COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+    for SA in "$CB_SA" "$COMPUTE_SA"; do
+        for ROLE in "roles/owner" "roles/logging.logWriter"; do
+            if gcloud projects get-iam-policy "$PROJECT_ID" --format=json 2>/dev/null | \
+                grep -q "$SA.*$(basename "$ROLE")" 2>/dev/null; then
+                true  # already has role
+            else
+                gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+                    --member="serviceAccount:${SA}" \
+                    --role="$ROLE" \
+                    --quiet --format=none 2>&1 || true
+            fi
+        done
+    done
+    log "  Service account permissions configured"
 
     # --- Submit Cloud Build job ---
     echo ""
@@ -210,12 +230,10 @@ if [ "$COMMAND" = "setup" ]; then
     echo "  You can safely close this terminal after submission."
     echo ""
 
-    # Build substitutions
-    SUBS="_REPO_URL=${REPO_URL},_REGION=${REGION}"
-    [ -n "$WEBHOOK_URL" ] && SUBS="${SUBS},_WEBHOOK_URL=${WEBHOOK_URL}"
-    [ -n "$EMAIL_FUNCTION_URL" ] && SUBS="${SUBS},_EMAIL_FUNC_URL=${EMAIL_FUNCTION_URL},_EMAIL=${EMAIL}"
-
+    # Write webhook URL to a temp file to avoid shell escaping issues with & chars
     TMPDIR=$(mktemp -d)
+    trap "rm -rf '$TMPDIR'" EXIT
+
     cat > "${TMPDIR}/cloudbuild.yaml" << 'BUILDEOF'
 steps:
   - name: 'gcr.io/cloud-builders/git'
@@ -244,15 +262,23 @@ options:
   machineType: 'E2_HIGHCPU_8'
 BUILDEOF
 
+    # Build the substitutions array — use gcloud's --substitutions flag carefully.
+    # Webhook URLs contain & and = which are safe in Cloud Build substitution values
+    # but must be properly quoted when passed via shell.
+    SUBS_ARGS=("_REPO_URL=${REPO_URL}" "_REGION=${REGION}")
+    [ -n "$WEBHOOK_URL" ] && SUBS_ARGS+=("_WEBHOOK_URL=${WEBHOOK_URL}")
+    [ -n "$EMAIL_FUNCTION_URL" ] && SUBS_ARGS+=("_EMAIL_FUNC_URL=${EMAIL_FUNCTION_URL}" "_EMAIL=${EMAIL}")
+
+    # Join with commas
+    SUBS_STR=$(IFS=,; echo "${SUBS_ARGS[*]}")
+
     BUILD_OUTPUT=$(gcloud builds submit \
         --config="${TMPDIR}/cloudbuild.yaml" \
         --project="$PROJECT_ID" \
         --region="$REGION" \
         --no-source \
-        --substitutions="${SUBS}" \
+        --substitutions="$SUBS_STR" \
         --async 2>&1)
-
-    rm -rf "$TMPDIR"
 
     BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -oP 'builds/\K[a-f0-9-]+' | head -1)
 
@@ -319,7 +345,7 @@ elif [ "$COMMAND" = "teardown" ]; then
             --project="$PROJECT_ID" --quiet 2>/dev/null || true
         gcloud workstations delete "$WORKSTATION" \
             --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
-            --project="$PROJECT_ID" --quiet 2>/dev/null
+            --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"
@@ -331,7 +357,7 @@ elif [ "$COMMAND" = "teardown" ]; then
         --cluster="$CLUSTER" --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
         gcloud workstations configs delete "$CONFIG" \
             --cluster="$CLUSTER" --region="$REGION" \
-            --project="$PROJECT_ID" --quiet 2>/dev/null
+            --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"
@@ -342,7 +368,7 @@ elif [ "$COMMAND" = "teardown" ]; then
     if gcloud workstations clusters describe "$CLUSTER" \
         --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
         gcloud workstations clusters delete "$CLUSTER" \
-            --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+            --region="$REGION" --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"
@@ -353,7 +379,7 @@ elif [ "$COMMAND" = "teardown" ]; then
     if gcloud artifacts repositories describe "$AR_REPO" \
         --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
         gcloud artifacts repositories delete "$AR_REPO" \
-            --location="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+            --location="$REGION" --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"
@@ -365,7 +391,7 @@ elif [ "$COMMAND" = "teardown" ]; then
         --router=ws-router --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
         gcloud compute routers nats delete ws-nat \
             --router=ws-router --region="$REGION" \
-            --project="$PROJECT_ID" --quiet 2>/dev/null
+            --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"
@@ -376,7 +402,7 @@ elif [ "$COMMAND" = "teardown" ]; then
     if gcloud compute routers describe ws-router \
         --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
         gcloud compute routers delete ws-router \
-            --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+            --region="$REGION" --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"
@@ -387,7 +413,7 @@ elif [ "$COMMAND" = "teardown" ]; then
     if gcloud scheduler jobs describe ws-daily-start \
         --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
         gcloud scheduler jobs delete ws-daily-start \
-            --location="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+            --location="$REGION" --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"
@@ -398,7 +424,7 @@ elif [ "$COMMAND" = "teardown" ]; then
     if gcloud functions describe ws-email-notify \
         --gen2 --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
         gcloud functions delete ws-email-notify \
-            --gen2 --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null
+            --gen2 --region="$REGION" --project="$PROJECT_ID" --quiet
         log "  Deleted"
     else
         log "  Not found — skipping"

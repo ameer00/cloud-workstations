@@ -1,9 +1,12 @@
 #!/bin/bash
 # =============================================================================
-# cloud-build-setup.sh — Main setup script (runs inside Cloud Build)
+# cloud-build-setup.sh — Main setup script (runs inside Cloud Build or locally)
 # =============================================================================
 # Creates the ENTIRE Cloud Workstation infrastructure from scratch.
 # Every step is idempotent, self-recovering, and tested.
+#
+# Can run inside Cloud Build (REPO_DIR=/workspace/repo) or locally
+# (auto-detects repo root from script location).
 # =============================================================================
 
 set -euo pipefail
@@ -18,9 +21,15 @@ CONFIG="ws-config"
 WORKSTATION="dev-workstation"
 AR_REPO="workstation-images"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPO}/workstation:latest"
-REPO_DIR="/workspace/repo"
 PASS=0; FAIL=0; WARN=0
 START_TIME=$(date +%s)
+
+# Auto-detect repo directory: use /workspace/repo (Cloud Build) or derive from script location
+if [ -d "/workspace/repo/scripts" ]; then
+    REPO_DIR="/workspace/repo"
+else
+    REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
 
 log()  { echo "[$(date '+%H:%M:%S')] $1"; }
 step() { echo ""; echo "========================================"; echo "  $1"; echo "========================================"; }
@@ -68,8 +77,7 @@ notify_and_fail() {
     local elapsed=$(( $(date +%s) - START_TIME ))
     local mins=$(( elapsed / 60 ))
     notify "Setup FAILED" "Project: ${PROJECT_ID}" \
-        "Failed at: <b>$1</b><br>After: ${mins} minutes<br>PASS: ${PASS} | FAIL: ${FAIL} | WARN: ${WARN}<br><br>Re-run <code>setup.sh</code> to retry (idempotent)." \
-        "#f7768e"
+        "Failed at: <b>$1</b><br>After: ${mins} minutes<br>PASS: ${PASS} | FAIL: ${FAIL} | WARN: ${WARN}<br><br>Re-run <code>setup.sh</code> to retry (idempotent)."
     exit 1
 }
 
@@ -91,7 +99,7 @@ test_pass() { PASS=$((PASS + 1)); log "  PASS: $1"; }
 test_fail() { FAIL=$((FAIL + 1)); log "  FAIL: $1"; }
 test_warn() { WARN=$((WARN + 1)); log "  WARN: $1"; }
 
-# SSH helpers with retry
+# SSH helper with retry — runs command on workstation
 ws_ssh() {
     retry 3 10 gcloud workstations ssh "$WORKSTATION" \
         --project="$PROJECT_ID" --region="$REGION" \
@@ -99,12 +107,16 @@ ws_ssh() {
         --command="$1"
 }
 
+# Pipe helper — accepts stdin piped to workstation command
 ws_pipe() {
     retry 3 10 gcloud workstations ssh "$WORKSTATION" \
         --project="$PROJECT_ID" --region="$REGION" \
         --cluster="$CLUSTER" --config="$CONFIG" \
         --command="$1"
 }
+
+# Source Nix profile — works with both old and new Nix profile paths
+NIX_SOURCE='if [ -e ~/.nix-profile/etc/profile.d/nix.sh ]; then . ~/.nix-profile/etc/profile.d/nix.sh; elif [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh; fi; export PATH="$HOME/.nix-profile/bin:$HOME/.local/state/nix/profiles/profile/bin:$PATH"'
 
 PROJECT_NUMBER=""
 
@@ -172,8 +184,18 @@ fi
 cd "${REPO_DIR}"
 
 # =========================================================================
-step "Step 4/15: Create Cloud NAT (internet access)"
+step "Step 4/15: Ensure default VPC network + Cloud NAT"
 # =========================================================================
+# Ensure default VPC network exists (required for cluster + NAT)
+if gcloud compute networks describe default --project="$PROJECT_ID" >/dev/null 2>&1; then
+    log "Default VPC network exists"
+else
+    log "Creating default VPC network..."
+    gcloud compute networks create default \
+        --subnet-mode=auto --project="$PROJECT_ID" --quiet 2>&1 | head -3
+    log "Default network created"
+fi
+
 if gcloud compute routers describe ws-router \
     --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
     log "Cloud Router already exists — skipping"
@@ -213,15 +235,21 @@ else
 fi
 
 # =========================================================================
-step "Step 6/15: Grant Workstations service agent AR access"
+step "Step 6/15: Grant AR access to service accounts"
 # =========================================================================
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 WS_SA="service-${PROJECT_NUMBER}@gcp-sa-workstations.iam.gserviceaccount.com"
-gcloud artifacts repositories add-iam-policy-binding "$AR_REPO" \
-    --location="$REGION" \
-    --member="serviceAccount:${WS_SA}" \
-    --role="roles/artifactregistry.reader" \
-    --project="$PROJECT_ID" --quiet >/dev/null 2>&1 || true
-test_pass "AR reader granted to Workstations SA"
+
+# Grant AR reader to both the Workstations service agent AND the compute SA
+# (compute SA is used as the workstation's service account for image pulling)
+for SA in "$WS_SA" "$COMPUTE_SA"; do
+    gcloud artifacts repositories add-iam-policy-binding "$AR_REPO" \
+        --location="$REGION" \
+        --member="serviceAccount:${SA}" \
+        --role="roles/artifactregistry.reader" \
+        --project="$PROJECT_ID" --quiet --format=none 2>&1 || true
+done
+test_pass "AR reader granted to Workstations SA and Compute SA"
 
 # =========================================================================
 step "Step 7/15: Create Workstation Config"
@@ -230,12 +258,14 @@ if gcloud workstations configs describe "$CONFIG" \
     --cluster="$CLUSTER" --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
     log "Config already exists — skipping"
 else
+    # Must specify --service-account so workstation VMs can pull the custom image
     retry 2 10 gcloud workstations configs create "$CONFIG" \
         --cluster="$CLUSTER" --region="$REGION" \
         --machine-type=n1-standard-16 \
         --accelerator-type=nvidia-tesla-t4 --accelerator-count=1 \
         --pd-disk-size=500 --pd-disk-type=pd-ssd \
         --container-custom-image="$IMAGE" \
+        --service-account="$COMPUTE_SA" \
         --idle-timeout=14400 --running-timeout=43200 \
         --disable-public-ip-addresses \
         --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring \
@@ -261,10 +291,20 @@ else
         --project="$PROJECT_ID"
 fi
 
-log "Starting workstation (3-5 minutes)..."
-gcloud workstations start "$WORKSTATION" \
+# Check if already running
+WS_STATE=$(gcloud workstations describe "$WORKSTATION" \
     --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
-    --project="$PROJECT_ID" 2>/dev/null || true
+    --project="$PROJECT_ID" --format="value(state)" 2>/dev/null || echo "UNKNOWN")
+
+if [ "$WS_STATE" != "STATE_RUNNING" ]; then
+    log "Starting workstation (3-5 minutes)..."
+    if ! gcloud workstations start "$WORKSTATION" \
+        --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
+        --project="$PROJECT_ID" 2>&1; then
+        test_fail "Workstation start failed"
+        notify_and_fail "Workstation start"
+    fi
+fi
 
 # Wait for SSH with extended timeout
 log "Waiting for SSH access..."
@@ -289,21 +329,20 @@ notify "Progress: Workstation Running" "Project: ${PROJECT_ID}" "Workstation is 
 # =========================================================================
 step "Step 9/15: Install Nix package manager"
 # =========================================================================
-if ws_ssh "test -d /home/user/nix && echo exists" | grep -q "exists"; then
-    log "Nix already on persistent disk — skipping"
+# Cloud Workstations mount /nix from the persistent disk automatically.
+# Nix installs directly to /nix which persists across restarts.
+# No bind-mount or copy needed.
+if ws_ssh "command -v nix >/dev/null 2>&1 && echo exists || (${NIX_SOURCE} && command -v nix >/dev/null 2>&1 && echo exists || echo missing)" | grep -q "exists"; then
+    log "Nix already installed — skipping"
     test_pass "Nix persistent install"
 else
     log "Installing Nix..."
-    ws_ssh 'sh <(curl -L https://nixos.org/nix/install) --no-daemon' || true
-    log "Moving to persistent disk..."
-    ws_ssh 'cp -a /nix /home/user/nix'
-    # Bind mount
-    gcloud workstations ssh "$WORKSTATION" \
-        --project="$PROJECT_ID" --region="$REGION" \
-        --cluster="$CLUSTER" --config="$CONFIG" \
-        --command="sudo bash -c 'rm -rf /nix && mkdir -p /nix && mount --bind /home/user/nix /nix'" 2>/dev/null
+    # Clean up any broken prior install state
+    ws_ssh 'rm -rf ~/.nix-profile ~/.local/state/nix ~/.nix-channels ~/.nix-defexpr 2>/dev/null; true'
+    # Install Nix (installs directly to /nix which is persistent)
+    ws_ssh 'curl -L https://nixos.org/nix/install | sh -s -- --no-daemon' || true
     # Verify
-    if ws_ssh '. ~/.nix-profile/etc/profile.d/nix.sh && nix --version' | grep -q "nix"; then
+    if ws_ssh "${NIX_SOURCE} && nix --version" 2>/dev/null | grep -q "nix"; then
         test_pass "Nix installed"
     else
         test_fail "Nix installation"
@@ -314,9 +353,7 @@ fi
 step "Step 10/15: Install Nix Home Manager + packages"
 # =========================================================================
 log "Setting up Home Manager and packages (this takes 5-10 minutes)..."
-ws_ssh '
-set -e
-. /home/user/.nix-profile/etc/profile.d/nix.sh
+ws_ssh "${NIX_SOURCE}"'
 
 if ! nix-channel --list | grep -q home-manager; then
     nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
@@ -352,7 +389,7 @@ echo "HOME_MANAGER_DONE"
 ' | tail -5
 
 # Verify key packages
-VERIFY=$(ws_ssh '. ~/.nix-profile/etc/profile.d/nix.sh && echo "sway=$(sway --version 2>/dev/null | head -1)" && echo "nvim=$(nvim --version 2>/dev/null | head -1)" && echo "node=$(node --version 2>/dev/null)"')
+VERIFY=$(ws_ssh "${NIX_SOURCE}"' && echo "sway=$(sway --version 2>/dev/null | head -1)" && echo "nvim=$(nvim --version 2>/dev/null | head -1)" && echo "node=$(node --version 2>/dev/null)"')
 echo "$VERIFY" | grep -q "sway" && test_pass "Sway installed" || test_warn "Sway not verified"
 echo "$VERIFY" | grep -q "NVIM" && test_pass "Neovim installed" || test_warn "Neovim not verified"
 echo "$VERIFY" | grep -q "v22" && test_pass "Node.js installed" || test_warn "Node.js not verified"
@@ -398,7 +435,7 @@ gcloud workstations ssh "$WORKSTATION" \
 
 # Verify setup results
 SETUP_VERIFY=$(ws_ssh '
-. ~/.nix-profile/etc/profile.d/nix.sh 2>/dev/null
+'"${NIX_SOURCE}"'
 echo "fonts=$(fc-list 2>/dev/null | grep -ci "operator mono")"
 echo "zshrc=$(test -f ~/.zshrc && echo yes || echo no)"
 echo "starship=$(~/.local/bin/starship --version 2>/dev/null | head -1)"
@@ -416,7 +453,7 @@ echo "$SETUP_VERIFY" | grep -q "zsh_plugins=yes" && test_pass "ZSH plugins" || t
 step "Step 14/15: Install AI tools and Antigravity"
 # =========================================================================
 ws_ssh '
-. /home/user/.nix-profile/etc/profile.d/nix.sh
+'"${NIX_SOURCE}"'
 export NPM_CONFIG_PREFIX=$HOME/.npm-global
 mkdir -p $HOME/.npm-global/bin
 
@@ -445,7 +482,6 @@ if gcloud scheduler jobs describe ws-daily-start \
     --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
     log "Cloud Scheduler already exists — skipping"
 else
-    COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
     retry 2 5 gcloud scheduler jobs create http ws-daily-start \
         --project="$PROJECT_ID" --location="$REGION" \
         --schedule="0 7 * * *" --time-zone="America/Los_Angeles" \
@@ -490,12 +526,10 @@ if [ "$FAIL" -gt 0 ]; then
     echo "  Some steps failed. Re-run setup.sh to retry (all steps are idempotent)."
     echo ""
     notify "Setup FAILED" "Project: ${PROJECT_ID}" \
-        "PASS: ${PASS} | FAIL: <b>${FAIL}</b> | WARN: ${WARN}<br>Duration: ${MINS} minutes<br><br>Some steps failed. Re-run <code>setup.sh</code> to retry (idempotent)." \
-        "#f7768e"
+        "PASS: ${PASS} | FAIL: <b>${FAIL}</b> | WARN: ${WARN}<br>Duration: ${MINS} minutes<br><br>Some steps failed. Re-run <code>setup.sh</code> to retry (idempotent)."
 else
     notify "Setup COMPLETE" "Project: ${PROJECT_ID}" \
-        "PASS: ${PASS} | FAIL: ${FAIL} | WARN: ${WARN}<br>Duration: ${MINS} minutes<br><br>Workstation URL: <b>https://${WS_HOST}</b><br><br>Start: <code>gcloud workstations start ${WORKSTATION} --config=${CONFIG} --cluster=${CLUSTER} --region=${REGION} --project=${PROJECT_ID}</code>" \
-        "#9ece6a"
+        "PASS: ${PASS} | FAIL: ${FAIL} | WARN: ${WARN}<br>Duration: ${MINS} minutes<br><br>Workstation URL: <b>https://${WS_HOST}</b><br><br>Start: <code>gcloud workstations start ${WORKSTATION} --config=${CONFIG} --cluster=${CLUSTER} --region=${REGION} --project=${PROJECT_ID}</code>"
 fi
 
 echo "============================================="
