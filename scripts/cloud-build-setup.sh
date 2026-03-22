@@ -482,22 +482,19 @@ export NPM_CONFIG_PREFIX=$HOME/.npm-global
 mkdir -p $HOME/.npm-global/bin
 
 npm install -g @anthropic-ai/claude-code @google/gemini-cli 2>/dev/null || true
-
-if [ ! -d "$HOME/.antigravity" ]; then
-    mkdir -p $HOME/.antigravity && cd $HOME/.antigravity
-    curl -sL https://antigravity.google/download/linux -o antigravity.tar.gz || true
-    [ -f antigravity.tar.gz ] && tar xzf antigravity.tar.gz 2>/dev/null && rm -f antigravity.tar.gz || true
-fi
 ' || true
+
+# Antigravity is pre-installed via apt in the Docker image (/usr/bin/antigravity).
+# No manual download needed.
 
 AI_VERIFY=$(ws_ssh '
 echo "claude=$(~/.npm-global/bin/claude --version 2>/dev/null | head -1)"
 echo "gemini=$(~/.npm-global/bin/gemini --version 2>/dev/null | head -1)"
-echo "antigravity=$(test -d ~/.antigravity && echo yes || echo no)"
+echo "antigravity=$(which antigravity 2>/dev/null && antigravity --version 2>/dev/null | head -1 || echo missing)"
 ')
 echo "$AI_VERIFY" | grep -q "claude=.*Claude" && test_pass "Claude Code" || test_warn "Claude Code not verified"
 echo "$AI_VERIFY" | grep -q "gemini=[0-9]" && test_pass "Gemini CLI" || test_warn "Gemini CLI not verified"
-echo "$AI_VERIFY" | grep -q "antigravity=yes" && test_pass "Antigravity" || test_warn "Antigravity not verified"
+echo "$AI_VERIFY" | grep -q "/usr/bin/antigravity" && test_pass "Antigravity" || test_warn "Antigravity not verified"
 
 # =========================================================================
 step "Step 16/17: Create Cloud Scheduler"

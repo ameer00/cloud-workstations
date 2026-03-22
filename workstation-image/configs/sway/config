@@ -104,7 +104,7 @@ bindsym $mod+e exec $nix/thunar
 bindsym $mod+b exec google-chrome-stable --disable-dev-shm-usage
 
 # Antigravity (Electron app — Wayland, no-sandbox, /dev/shm too small at 64MB)
-bindsym $mod+n exec /home/user/.antigravity/antigravity/antigravity --no-sandbox --ozone-platform=wayland --disable-gpu --disable-dev-shm-usage
+bindsym $mod+n exec /usr/bin/antigravity --no-sandbox --ozone-platform=wayland --disable-gpu --disable-dev-shm-usage
 
 # IntelliJ IDEA Community
 bindsym $mod+m exec $nix/idea-community
