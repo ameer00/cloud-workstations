@@ -37,7 +37,7 @@ font pango:monospace Bold 10
 # Gaps and Borders
 # -----------------------------------------------------------------------------
 gaps inner 6
-gaps outer 12
+gaps outer 0
 smart_gaps on
 
 default_border pixel 2
