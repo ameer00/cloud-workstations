@@ -4,9 +4,8 @@ GPU-powered Cloud Workstation in GCP with Sway desktop, Nix package manager, and
 
 ## Quick Start
 
-1. Clone this repo
-2. Run `bash scripts/configure.sh` to set your GCP project details
-3. Run `bash scripts/ws.sh setup -p YOUR_PROJECT_ID`
+1. Fork and clone this repo
+2. Run `bash scripts/ws.sh setup -p YOUR_PROJECT_ID`
 
 ## Setup
 
@@ -24,27 +23,19 @@ Open [Cloud Shell](https://shell.cloud.google.com) and run:
 gcloud auth login
 ```
 
-### Step 2: Clone and configure
+### Step 2: Clone and run setup
 
 ```bash
 git clone https://github.com/your-github-username/cloud-workstations.git
 cd cloud-workstations
-bash scripts/configure.sh
-```
-
-This will prompt you for your GCP project ID, project number, org domain, name, and email, then update all config files with your values.
-
-### Step 3: Run setup
-
-```bash
 bash scripts/ws.sh setup -p YOUR_PROJECT_ID
 ```
 
-Replace `YOUR_PROJECT_ID` with the project ID you entered during configuration.
+Replace `YOUR_PROJECT_ID` with your GCP project ID. The repo URL is auto-detected from your git remote — no configuration needed.
 
 **You can close your terminal immediately after the script prints the build ID.** All work runs inside Cloud Build and will continue independently.
 
-### Step 4 (optional): Get notified when it's done
+### Step 3 (optional): Get notified when it's done
 
 #### Google Chat webhook
 

@@ -16,7 +16,9 @@
 set -euo pipefail
 
 REGION="us-west1"
-REPO_URL="https://github.com/your-github-username/cloud-workstations.git"
+# Auto-detect repo URL from git remote (falls back to placeholder if not in a git repo)
+SCRIPT_DIR_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_URL=$(git -C "$SCRIPT_DIR_ROOT" remote get-url origin 2>/dev/null || echo "https://github.com/your-github-username/cloud-workstations.git")
 CLUSTER="workstation-cluster"
 CONFIG="ws-config"
 WORKSTATION="dev-workstation"

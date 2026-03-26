@@ -557,6 +557,8 @@
 - 36 files modified (all personal info replaced with placeholders)
 - 1 new file: `scripts/configure.sh`
 
+- **F-0049** (Remove configure.sh): Eliminated separate configure.sh script that was modifying 38 tracked files and creating permanent dirty git state. ws.sh now auto-detects REPO_URL from `git remote get-url origin`. README simplified from 3 steps to 2 (clone → ws.sh setup). Repo stays clean with generic placeholders.
+
 ### Decisions
 - Two-repo approach: public template (cloud-workstations) + private personal (ameer-workstations)
 - Private repo added as `private` remote for easy syncing
