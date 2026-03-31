@@ -16,7 +16,7 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$LOG_TAG] $1"; }
 
 log "Starting workstation bootstrap from $BOOT_DIR"
 
-for script in "$BOOT_DIR"/[0-9][0-9]-*.sh; do
+for script in "$BOOT_DIR"/[0-9][0-9]*.sh; do
     [ -f "$script" ] || continue
     script_name="$(basename "$script")"
     # Skip 08-workspaces.sh — it runs as a systemd service after Sway starts
