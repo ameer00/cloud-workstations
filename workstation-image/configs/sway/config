@@ -95,7 +95,7 @@ bindsym $mod+Return exec $nix/foot
 bindsym $mod+t exec $nix/foot
 
 # Application Launcher (wofi)
-bindsym $mod+r exec $nix/wofi --show drun
+bindsym $mod+r exec env -u LD_LIBRARY_PATH XDG_DATA_DIRS=/home/user/.nix-profile/share:/usr/share:/usr/local/share $nix/wofi --show drun --allow-images
 
 # File Manager (Thunar)
 bindsym $mod+e exec $nix/thunar
@@ -112,8 +112,8 @@ bindsym $mod+m exec env DISPLAY=:0 $nix/idea-oss
 # VS Code (Electron app — clear LD_LIBRARY_PATH so nvidia GL doesn't conflict with Nix)
 bindsym $mod+y exec env -u LD_LIBRARY_PATH $nix/code --no-sandbox --ozone-platform=wayland --disable-gpu --disable-dev-shm-usage
 
-# Clipboard history picker (clipman)
-bindsym $mod+a exec $nix/clipman pick --tool $nix/wofi
+# Clipboard history picker (clipman — clear LD_LIBRARY_PATH for Nix binaries)
+bindsym $mod+a exec env -u LD_LIBRARY_PATH $nix/clipman pick --tool $nix/wofi
 
 # Snippet picker (text expansion)
 bindsym $mod+s exec /home/user/.local/bin/snippet-picker
@@ -218,4 +218,5 @@ exec /usr/bin/Xwayland :0 &
 
 # Clipboard manager — watch clipboard and store history
 # Use full path since sway's shell doesn't have Nix profile in PATH
-exec /home/user/.nix-profile/bin/wl-paste -t text --watch /home/user/.nix-profile/bin/clipman store
+# Clear LD_LIBRARY_PATH to prevent nvidia GL conflicts with Nix binaries
+exec env -u LD_LIBRARY_PATH /home/user/.nix-profile/bin/wl-paste -t text --watch /home/user/.nix-profile/bin/clipman store
