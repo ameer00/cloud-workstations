@@ -1,7 +1,5 @@
 /*
  * Waybar CSS — Tokyo Night theme
- * For future use when layer-shell rendering is available on headless wayvnc.
- * Currently the Cloud Workstation uses swaybar + sway-status instead.
  */
 
 /* ── Tokyo Night palette ─────────────────────────────────────────── */
@@ -44,6 +42,7 @@ tooltip label {
 }
 
 /* ── All modules: pill-shaped containers ─────────────────────────── */
+#custom-apps,
 #workspaces,
 #mode,
 #window,
@@ -60,6 +59,7 @@ tooltip label {
     transition: all 0.2s ease;
 }
 
+#custom-apps:hover,
 #workspaces:hover,
 #cpu:hover,
 #memory:hover,
@@ -181,4 +181,12 @@ tooltip label {
 /* ── GPU (custom module) ─────────────────────────────────────────── */
 #custom-gpu {
     color: @accent;
+}
+
+/* ── Apps button (custom module) ────────────────────────────────── */
+#custom-apps {
+    background-color: rgba(122, 162, 247, 0.15);
+    color: @accent;
+    font-weight: bold;
+    padding: 0 16px;
 }

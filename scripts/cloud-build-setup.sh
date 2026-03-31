@@ -500,6 +500,12 @@ cat "${REPO_DIR}/workstation-image/configs/swaybar/sway-status" | \
     ws_pipe "mkdir -p ~/.local/bin && cat > ~/.local/bin/sway-status && chmod +x ~/.local/bin/sway-status"
 test_pass "sway-status deployed"
 
+cat "${REPO_DIR}/workstation-image/configs/waybar/config.jsonc" | \
+    ws_pipe "mkdir -p ~/.config/waybar && cat > ~/.config/waybar/config.jsonc"
+cat "${REPO_DIR}/workstation-image/configs/waybar/style.css" | \
+    ws_pipe "cat > ~/.config/waybar/style.css"
+test_pass "Waybar config deployed"
+
 # =========================================================================
 step "Step 14/19: Run initial setup"
 # =========================================================================

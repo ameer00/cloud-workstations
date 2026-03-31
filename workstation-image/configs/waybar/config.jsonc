@@ -1,6 +1,4 @@
 // Waybar configuration — Tokyo Night theme
-// For future use when layer-shell rendering is available on headless wayvnc.
-// Currently the Cloud Workstation uses swaybar + sway-status instead.
 {
     "layer": "top",
     "position": "top",
@@ -11,6 +9,7 @@
     "margin-right": 8,
 
     "modules-left": [
+        "custom/apps",
         "sway/workspaces",
         "sway/mode"
     ],
@@ -25,6 +24,12 @@
         "disk",
         "clock"
     ],
+
+    "custom/apps": {
+        "format": " Apps",
+        "on-click": "env -u LD_LIBRARY_PATH XDG_DATA_DIRS=/home/user/.nix-profile/share:/usr/share:/usr/local/share /home/user/.nix-profile/bin/wofi --show drun --allow-images",
+        "tooltip": false
+    },
 
     "sway/workspaces": {
         "disable-scroll": true,
@@ -83,7 +88,7 @@
     },
 
     "custom/gpu": {
-        "exec": "nvidia-smi --query-gpu=temperature.gpu,utilization.gpu --format=csv,noheader,nounits 2>/dev/null | awk -F', ' '{printf \" %s°C %s%%\", $1, $2}' || echo ' N/A'",
+        "exec": "/var/lib/nvidia/bin/nvidia-smi --query-gpu=temperature.gpu,utilization.gpu --format=csv,noheader,nounits 2>/dev/null | awk -F', ' '{printf \" %s°C %s%%\", $1, $2}' || echo ' N/A'",
         "interval": 5,
         "format": "{}",
         "tooltip": false
