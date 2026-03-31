@@ -118,6 +118,7 @@ A Cloud Scheduler job starts the workstation every day at **7:00 AM Pacific**. N
 | **Browsers** | Google Chrome, Chromium |
 | **IDEs** | VS Code, Neovim (custom config) |
 | **AI Tools** | Claude Code, Gemini CLI |
+| **Languages** | Go (latest), Rust (via rustup), Python 3.12 (via pyenv), Ruby 3.3 (via rbenv), Node.js 22 (via Nix) |
 | **Apps** | Antigravity, tmux, ripgrep, fd, jq, ffmpeg, wofi, thunar |
 | **Auto-start** | Cloud Scheduler starts workstation daily at 7AM PT |
 | **Boot apps** | 4 workspaces auto-launch: terminal, Chrome, Antigravity, terminal |
@@ -139,6 +140,18 @@ All shortcuts use `CTRL+SHIFT` as the modifier (works through noVNC in browser).
 | `CTRL+SHIFT+F` | Toggle fullscreen |
 | `CTRL+SHIFT+U/I/O/P` | Switch to workspace 1/2/3/4 |
 | `CTRL+SHIFT+H/J/K/L` | Switch to workspace 5/6/7/8 |
+
+## Language Version Management
+
+Languages are managed by native version managers for easy multi-version support:
+
+| Language | Manager | Switch Versions |
+|----------|---------|----------------|
+| Go | Direct install | Download from go.dev |
+| Rust | rustup | `rustup install nightly` |
+| Python | pyenv | `pyenv install 3.11 && pyenv global 3.11` |
+| Ruby | rbenv | `rbenv install 3.2.0 && rbenv global 3.2.0` |
+| Node.js | Nix | Managed via Home Manager |
 
 ## Re-running Setup
 

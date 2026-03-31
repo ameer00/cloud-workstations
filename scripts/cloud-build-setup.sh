@@ -122,7 +122,7 @@ NIX_SOURCE='if [ -e ~/.nix-profile/etc/profile.d/nix.sh ]; then . ~/.nix-profile
 PROJECT_NUMBER=""
 
 # =========================================================================
-step "Step 1/17: Enable APIs"
+step "Step 1/19: Enable APIs"
 # =========================================================================
 log "Enabling required GCP APIs..."
 retry 3 5 gcloud services enable \
@@ -146,7 +146,7 @@ PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectN
 log "Project number: $PROJECT_NUMBER"
 
 # =========================================================================
-step "Step 2/17: Create Artifact Registry"
+step "Step 2/19: Create Artifact Registry"
 # =========================================================================
 if gcloud artifacts repositories describe "$AR_REPO" \
     --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -166,7 +166,7 @@ else
 fi
 
 # =========================================================================
-step "Step 3/17: Build and push Docker image"
+step "Step 3/19: Build and push Docker image"
 # =========================================================================
 log "Building Docker image (this takes 10-15 minutes)..."
 cd "${REPO_DIR}/workstation-image"
@@ -185,7 +185,7 @@ fi
 cd "${REPO_DIR}"
 
 # =========================================================================
-step "Step 4/17: Ensure default VPC network + Cloud NAT"
+step "Step 4/19: Ensure default VPC network + Cloud NAT"
 # =========================================================================
 # Ensure default VPC network exists (required for cluster + NAT)
 if gcloud compute networks describe default --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -217,7 +217,7 @@ fi
 test_pass "Cloud NAT configured"
 
 # =========================================================================
-step "Step 5/17: Create Workstation Cluster"
+step "Step 5/19: Create Workstation Cluster"
 # =========================================================================
 if gcloud workstations clusters describe "$CLUSTER" \
     --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -236,7 +236,7 @@ else
 fi
 
 # =========================================================================
-step "Step 6/17: Grant AR access to service accounts"
+step "Step 6/19: Grant AR access to service accounts"
 # =========================================================================
 COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 WS_SA="service-${PROJECT_NUMBER}@gcp-sa-workstations.iam.gserviceaccount.com"
@@ -253,7 +253,7 @@ done
 test_pass "AR reader granted to Workstations SA and Compute SA"
 
 # =========================================================================
-step "Step 7/17: Create Workstation Config"
+step "Step 7/19: Create Workstation Config"
 # =========================================================================
 if gcloud workstations configs describe "$CONFIG" \
     --cluster="$CLUSTER" --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -280,7 +280,7 @@ else
 fi
 
 # =========================================================================
-step "Step 8/17: Create and start Workstation"
+step "Step 8/19: Create and start Workstation"
 # =========================================================================
 if gcloud workstations describe "$WORKSTATION" \
     --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
@@ -328,7 +328,7 @@ fi
 notify "Progress: Workstation Running" "Project: ${PROJECT_ID}" "Workstation is up and SSH ready. Installing Nix and packages next (10-15 min)..."
 
 # =========================================================================
-step "Step 8b/17: Grant user access to workstation"
+step "Step 8b/19: Grant user access to workstation"
 # =========================================================================
 # Cloud Workstations require workstation-level IAM (not just project-level)
 # for users to connect via browser. Grant roles/workstations.user to the
@@ -379,7 +379,7 @@ else
 fi
 
 # =========================================================================
-step "Step 9/17: Install Nix package manager"
+step "Step 9/19: Install Nix package manager"
 # =========================================================================
 # Cloud Workstations mount /nix from the persistent disk during first boot.
 # Nix installs to /nix. Step 11 copies to /home/user/nix for restart persistence.
@@ -401,7 +401,7 @@ else
 fi
 
 # =========================================================================
-step "Step 10/17: Install Nix Home Manager + packages"
+step "Step 10/19: Install Nix Home Manager + packages"
 # =========================================================================
 log "Setting up Home Manager and packages (this takes 5-10 minutes)..."
 ws_ssh "${NIX_SOURCE}"'
@@ -446,7 +446,7 @@ echo "$VERIFY" | grep -q "NVIM" && test_pass "Neovim installed" || test_warn "Ne
 echo "$VERIFY" | grep -q "v22" && test_pass "Node.js installed" || test_warn "Node.js not verified"
 
 # =========================================================================
-step "Step 11/17: Persist Nix store for restarts"
+step "Step 11/19: Persist Nix store for restarts"
 # =========================================================================
 # Cloud Workstations only persist /home across restarts. The /nix mount
 # is ephemeral and gets wiped on container restart. Copy the entire nix
@@ -471,7 +471,7 @@ else
 fi
 
 # =========================================================================
-step "Step 12/17: Deploy boot scripts and fonts"
+step "Step 12/19: Deploy boot scripts and fonts"
 # =========================================================================
 log "Deploying boot scripts..."
 tar czf /tmp/boot-scripts.tar.gz -C "${REPO_DIR}/workstation-image/boot" .
@@ -490,7 +490,7 @@ cat /tmp/dev-fonts.tar.gz | ws_pipe "mkdir -p ~/boot/fonts && cd ~/boot/fonts &&
 test_pass "Fonts deployed"
 
 # =========================================================================
-step "Step 13/17: Deploy configs"
+step "Step 13/19: Deploy configs"
 # =========================================================================
 cat "${REPO_DIR}/workstation-image/configs/sway/config" | \
     ws_pipe "mkdir -p ~/.config/sway && cat > ~/.config/sway/config"
@@ -501,7 +501,7 @@ cat "${REPO_DIR}/workstation-image/configs/swaybar/sway-status" | \
 test_pass "sway-status deployed"
 
 # =========================================================================
-step "Step 14/17: Run initial setup"
+step "Step 14/19: Run initial setup"
 # =========================================================================
 log "Running setup.sh (fonts, ZSH, Starship, foot)..."
 gcloud workstations ssh "$WORKSTATION" \
@@ -526,7 +526,41 @@ echo "$SETUP_VERIFY" | grep -q "foot=yes" && test_pass "foot.ini config" || test
 echo "$SETUP_VERIFY" | grep -q "zsh_plugins=yes" && test_pass "ZSH plugins" || test_warn "ZSH plugins not verified"
 
 # =========================================================================
-step "Step 15/17: Install AI tools and Antigravity"
+step "Step 15/19: Install language build dependencies"
+# =========================================================================
+log "Installing apt build dependencies for pyenv/rbenv compilation..."
+ws_ssh "sudo bash /home/user/boot/07a-lang-deps.sh"
+test_pass "Language build dependencies installed"
+
+# =========================================================================
+step "Step 16/19: Install programming languages (Go, Rust, Python, Ruby)"
+# =========================================================================
+log "Installing languages (first-time: 10-15 min for Python/Ruby compilation)..."
+ws_ssh "sudo bash /home/user/boot/07b-languages.sh"
+
+# Verify language installations
+LANG_VERIFY=$(ws_ssh '
+export GOROOT=$HOME/go
+export GOPATH=$HOME/gopath
+export PATH="$GOROOT/bin:$GOPATH/bin:$HOME/.cargo/bin:$HOME/.pyenv/bin:$HOME/.rbenv/bin:$PATH"
+eval "$($HOME/.pyenv/bin/pyenv init -)" 2>/dev/null
+eval "$($HOME/.rbenv/bin/rbenv init -)" 2>/dev/null
+echo "go=$(go version 2>/dev/null | head -1)"
+echo "rust=$(rustc --version 2>/dev/null)"
+echo "cargo=$(cargo --version 2>/dev/null)"
+echo "python=$(python --version 2>/dev/null)"
+echo "ruby=$(ruby --version 2>/dev/null)"
+')
+echo "$LANG_VERIFY" | grep -q "go=go version" && test_pass "Go installed" || test_warn "Go not verified"
+echo "$LANG_VERIFY" | grep -q "rust=rustc" && test_pass "Rust installed" || test_warn "Rust not verified"
+echo "$LANG_VERIFY" | grep -q "cargo=cargo" && test_pass "Cargo installed" || test_warn "Cargo not verified"
+echo "$LANG_VERIFY" | grep -q "python=Python 3" && test_pass "Python installed" || test_warn "Python not verified"
+echo "$LANG_VERIFY" | grep -q "ruby=ruby 3" && test_pass "Ruby installed" || test_warn "Ruby not verified"
+
+notify "Progress: Languages Installed" "Project: ${PROJECT_ID}" "Go, Rust, Python, Ruby installed. Installing AI tools next..."
+
+# =========================================================================
+step "Step 17/19: Install AI tools and Antigravity"
 # =========================================================================
 ws_ssh '
 '"${NIX_SOURCE}"'
@@ -549,7 +583,7 @@ echo "$AI_VERIFY" | grep -q "gemini=[0-9]" && test_pass "Gemini CLI" || test_war
 echo "$AI_VERIFY" | grep -q "/usr/bin/antigravity" && test_pass "Antigravity" || test_warn "Antigravity not verified"
 
 # =========================================================================
-step "Step 16/17: Create Cloud Scheduler (weekday start/stop)"
+step "Step 18/19: Create Cloud Scheduler (weekday start/stop)"
 # =========================================================================
 WS_API_BASE="https://workstations.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/workstationClusters/${CLUSTER}/workstationConfigs/${CONFIG}/workstations/${WORKSTATION}"
 
@@ -600,7 +634,7 @@ else
 fi
 
 # =========================================================================
-step "Step 17/17: Verify noVNC desktop access"
+step "Step 19/19: Verify noVNC desktop access"
 # =========================================================================
 # The full chain: Sway (compositor) → wayvnc (VNC on :5901) → noVNC (port 80)
 # Wait for services to stabilize after boot script setup
@@ -702,6 +736,7 @@ echo ""
 echo " Installed: Sway (Tokyo Night), Nix, ZSH, Starship,"
 echo "   Operator Mono font, Chrome, VS Code, Antigravity,"
 echo "   Claude Code, Gemini CLI, 4 auto-launched workspaces"
+echo "   Go, Rust (rustup), Python (pyenv), Ruby (rbenv), Node.js (Nix)"
 echo "============================================="
 
 [ "$FAIL" -gt 0 ] && exit 1 || exit 0
