@@ -25,8 +25,13 @@ log "=== App update started ==="
 
 # --- Update npm global packages (Claude Code, Gemini CLI) ---
 log "Updating npm global packages..."
-runuser -u $USER -- bash -c ". $NIX_SH && export NPM_CONFIG_PREFIX=$HOME_DIR/.npm-global && npm update -g @anthropic-ai/claude-code @google/gemini-cli" >> "$LOG_FILE" 2>&1
+runuser -u $USER -- bash -c ". $NIX_SH && export NPM_CONFIG_PREFIX=$HOME_DIR/.npm-global && npm update -g @anthropic-ai/claude-code @google/gemini-cli @openai/codex" >> "$LOG_FILE" 2>&1
 log "npm update complete"
+
+# --- Update OpenCode (Go binary) ---
+log "Updating OpenCode..."
+runuser -u $USER -- bash -c "export GOROOT=$HOME_DIR/go && export GOPATH=$HOME_DIR/gopath && export PATH=\$GOROOT/bin:\$GOPATH/bin:\$PATH && go install github.com/opencode-ai/opencode@latest" >> "$LOG_FILE" 2>&1
+log "OpenCode update complete"
 
 # --- Update Nix channel + Home Manager (VSCode, IntelliJ, etc.) ---
 log "Updating Nix channel and Home Manager..."
