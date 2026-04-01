@@ -19,9 +19,7 @@ Summary of all boot scripts that run on every workstation start. Scripts execute
 | 9 | `07b-languages.sh` | Install/update Go (tarball), Rust (rustup), Python (pyenv), Ruby (rbenv) | Yes — existence checks | First: ~15min, subsequent: ~30s |
 | 10 | `09-wofi.sh` | Deploy wofi config + Tokyo Night style.css to `~/.config/wofi/` | Yes — copy overwrite | ~1s |
 | 11 | `09-snippets.sh` | Deploy snippet-picker script + default snippets.conf (no-clobber) | Yes — cp -n for user config | ~1s |
-| 14 | `10-tests.sh` | Run ~82 verification tests, save results to `~/logs/boot-test-results.txt` | Yes — read-only tests | ~30s |
-
-**Note:** `08-workspaces.sh` is NOT run by setup.sh — it runs via systemd service `ws-autolaunch.service` after Sway starts. It launches apps on workspaces 1-4 and starts Xwayland for IntelliJ.
+**Note:** `08-workspaces.sh` and `10-tests.sh` are NOT run by setup.sh — they run via systemd services after Sway starts. See below.
 
 ## Execution Flow
 
@@ -41,12 +39,13 @@ Docker entrypoint
               ├── 07a-lang-deps.sh
               ├── 07b-languages.sh
               ├── 09-wofi.sh
-              ├── 09-snippets.sh
-              └── 10-tests.sh
+              └── 09-snippets.sh
 
 systemd (after Sway starts)
-  └── ws-autolaunch.service
-        └── 08-workspaces.sh (launches apps + Xwayland)
+  ├── ws-autolaunch.service
+  │     └── 08-workspaces.sh (launches apps + Xwayland)
+  └── ws-boot-tests.service (After=ws-autolaunch, 30s delay)
+        └── 10-tests.sh (run ~82 verification tests)
 ```
 
 ## Logs

@@ -15,6 +15,11 @@ NIX_SH="$HOME_DIR/.nix-profile/etc/profile.d/nix.sh"
 
 PASS=0; FAIL=0; WARN=0
 
+# Source Nix for this script context
+if [ -f "$NIX_SH" ]; then
+    . "$NIX_SH"
+fi
+
 runuser -u $USER -- mkdir -p "$LOG_DIR"
 
 log() { echo "$1" | tee -a "$RESULTS"; }

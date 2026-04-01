@@ -83,6 +83,25 @@ EOF
 ln -sf /etc/systemd/system/ws-autolaunch.service /etc/systemd/system/multi-user.target.wants/
 log "Created ws-autolaunch.service (runs 08-workspaces.sh after Sway)"
 
+# --- Create ws-boot-tests.service ---
+cat > /etc/systemd/system/ws-boot-tests.service << 'EOF'
+[Unit]
+Description=Run boot verification tests after all services are up
+After=ws-autolaunch.service
+Requires=sway-desktop.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 30
+ExecStart=/bin/bash /home/user/boot/10-tests.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+ln -sf /etc/systemd/system/ws-boot-tests.service /etc/systemd/system/multi-user.target.wants/
+log "Created ws-boot-tests.service (runs 10-tests.sh after Sway)"
+
 # --- Disable and mask TigerVNC ---
 rm -f /etc/systemd/system/multi-user.target.wants/tigervnc.service
 # Must rm first — ln -sf fails on overlay fs with regular files
