@@ -148,6 +148,23 @@ The workstation has TWO config systems that can conflict:
 5. **Test persistence**: After making changes, verify they survive by running `home-manager switch` and `swaymsg reload` — if the change disappears, it's not persistent
 6. **Never edit live-only**: Editing `~/.config/sway/config` directly is useless — it's a symlink to the Nix store managed by Home Manager. Always edit the source at `~/.config/home-manager/sway-config`
 
+### Mandatory Test Coverage (Non-Negotiable)
+
+**Every feature, keybinding, config, and tool MUST have a corresponding test in the boot test script (`workstation-image/boot/10-tests.sh`).**
+
+When adding or changing ANY of the following, you MUST also add or update a test:
+- **Keybindings**: Verify the binding exists in the sway config (grep check)
+- **App installs**: Verify the binary is on PATH (`which` check)
+- **Config files**: Verify the file exists and contains expected content
+- **Boot scripts**: Verify the script runs without errors
+- **Upgrade scripts**: Verify tools are at expected versions after upgrade
+
+The test script runs on every boot and saves results to:
+- `~/logs/boot-test-results.txt` — full PASS/FAIL details
+- `~/logs/boot-test-summary.txt` — one-line summary for quick checking
+
+**The definition of done for any feature includes: test added to `10-tests.sh` and passing.**
+
 ### Roles
 - **PO / CEO** (Your Name) — Product Owner, the human in the loop. Provides feedback, feature requests, and bug reports. Approves direction, tests the app
 - **PM** — Receives all PO feedback. Translates it into detailed product requirements with acceptance criteria. Works with TPM to create backlog items. Creates completion summaries and reports back to PO
