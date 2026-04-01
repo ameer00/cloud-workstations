@@ -1,0 +1,247 @@
+#!/bin/bash
+# =============================================================================
+# 10-tests.sh — Post-boot verification of all Cloud Workstation features
+# =============================================================================
+# Runs after all setup scripts. Tests every feature and saves results.
+# Results: ~/logs/boot-test-results.txt (full) + ~/logs/boot-test-summary.txt (one-line)
+# =============================================================================
+
+USER="user"
+HOME_DIR="/home/user"
+LOG_DIR="$HOME_DIR/logs"
+RESULTS="$LOG_DIR/boot-test-results.txt"
+SUMMARY="$LOG_DIR/boot-test-summary.txt"
+NIX_SH="$HOME_DIR/.nix-profile/etc/profile.d/nix.sh"
+
+PASS=0; FAIL=0; WARN=0
+
+runuser -u $USER -- mkdir -p "$LOG_DIR"
+
+log() { echo "$1" | tee -a "$RESULTS"; }
+
+test_pass() { PASS=$((PASS+1)); log "  PASS: $1"; }
+test_fail() { FAIL=$((FAIL+1)); log "  FAIL: $1"; }
+test_warn() { WARN=$((WARN+1)); log "  WARN: $1"; }
+
+check_binary() {
+    local name="$1" bin="$2"
+    if runuser -u $USER -- bash -c ". $NIX_SH && export PATH=$HOME_DIR/.npm-global/bin:$HOME_DIR/gopath/bin:$HOME_DIR/go/bin:$HOME_DIR/.cargo/bin:$HOME_DIR/.pyenv/bin:$HOME_DIR/.rbenv/bin:\$PATH && which $bin" >/dev/null 2>&1; then
+        test_pass "$name ($bin)"
+    else
+        test_fail "$name ($bin not found)"
+    fi
+}
+
+check_file() {
+    local name="$1" path="$2"
+    if [ -f "$path" ]; then
+        test_pass "$name"
+    else
+        test_fail "$name ($path missing)"
+    fi
+}
+
+check_dir() {
+    local name="$1" path="$2"
+    if [ -d "$path" ]; then
+        test_pass "$name"
+    else
+        test_fail "$name ($path missing)"
+    fi
+}
+
+check_grep() {
+    local name="$1" pattern="$2" file="$3"
+    if grep -q "$pattern" "$file" 2>/dev/null; then
+        test_pass "$name"
+    else
+        test_fail "$name (pattern '$pattern' not in $file)"
+    fi
+}
+
+check_process() {
+    local name="$1" pattern="$2"
+    if pgrep -f "$pattern" >/dev/null 2>&1; then
+        test_pass "$name running"
+    else
+        test_warn "$name not running (may start later)"
+    fi
+}
+
+# Start fresh results
+echo "========================================" > "$RESULTS"
+echo "Cloud Workstation Boot Test Results" >> "$RESULTS"
+echo "Date: $(TZ=America/Los_Angeles date)" >> "$RESULTS"
+echo "========================================" >> "$RESULTS"
+echo "" >> "$RESULTS"
+
+# =============================================================================
+# IDEs
+# =============================================================================
+log "--- IDEs ---"
+check_binary "VSCode" "code"
+check_binary "IntelliJ" "idea-oss"
+check_binary "Cursor" "cursor"
+check_binary "Windsurf" "windsurf"
+check_binary "Zed" "zed"
+
+# =============================================================================
+# AI CLI Tools
+# =============================================================================
+log ""
+log "--- AI CLI Tools ---"
+check_binary "Claude Code" "claude"
+check_binary "Codex" "codex"
+check_binary "OpenCode" "opencode"
+check_binary "Cody" "cody"
+check_binary "Pi" "pi"
+# Aider (pip, needs pyenv)
+if runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && which aider" >/dev/null 2>&1; then
+    test_pass "Aider (aider)"
+else
+    test_fail "Aider (not found)"
+fi
+# GH Copilot (extension)
+if runuser -u $USER -- bash -c ". $NIX_SH && gh copilot --version" >/dev/null 2>&1; then
+    test_pass "GH Copilot"
+else
+    test_warn "GH Copilot (extension may not be installed)"
+fi
+
+# =============================================================================
+# Languages
+# =============================================================================
+log ""
+log "--- Languages ---"
+check_binary "Go" "go"
+check_binary "Rust (rustc)" "rustc"
+check_binary "Cargo" "cargo"
+# Python (needs pyenv init)
+if runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && which python" >/dev/null 2>&1; then
+    test_pass "Python (pyenv)"
+else
+    test_fail "Python (pyenv not found)"
+fi
+# Ruby (needs rbenv init)
+if runuser -u $USER -- bash -c "export PATH=$HOME_DIR/.rbenv/bin:\$PATH && eval \"\$($HOME_DIR/.rbenv/bin/rbenv init -)\" && which ruby" >/dev/null 2>&1; then
+    test_pass "Ruby (rbenv)"
+else
+    test_fail "Ruby (rbenv not found)"
+fi
+# Node.js (via Nix)
+check_binary "Node.js" "node"
+check_binary "npm" "npm"
+
+# =============================================================================
+# Nix
+# =============================================================================
+log ""
+log "--- Nix ---"
+if runuser -u $USER -- bash -c ". $NIX_SH && nix-env --version" >/dev/null 2>&1; then
+    test_pass "nix-env works"
+else
+    test_fail "nix-env not working"
+fi
+if runuser -u $USER -- bash -c ". $NIX_SH && home-manager --version" >/dev/null 2>&1; then
+    test_pass "home-manager available"
+else
+    test_fail "home-manager not available"
+fi
+
+# =============================================================================
+# Config Files
+# =============================================================================
+log ""
+log "--- Config Files ---"
+check_file "Wofi config" "$HOME_DIR/.config/wofi/config"
+check_file "Wofi style" "$HOME_DIR/.config/wofi/style.css"
+check_file "Snippet picker" "$HOME_DIR/.local/bin/snippet-picker"
+check_file "Snippets conf" "$HOME_DIR/.config/snippets/snippets.conf"
+check_file "sway-status" "$HOME_DIR/.local/bin/sway-status"
+check_file "Sway config" "$HOME_DIR/.config/sway/config"
+check_file ".zshrc" "$HOME_DIR/.zshrc"
+check_file ".env" "$HOME_DIR/.env"
+
+# =============================================================================
+# Sway Config Content
+# =============================================================================
+log ""
+log "--- Sway Config Checks ---"
+SWAY_CFG="$HOME_DIR/.config/sway/config"
+check_grep "xwayland disable" "xwayland disable" "$SWAY_CFG"
+check_grep "IntelliJ DISPLAY=:0" "DISPLAY=:0.*idea-oss" "$SWAY_CFG"
+check_grep "VSCode LD_LIBRARY_PATH" "LD_LIBRARY_PATH.*code" "$SWAY_CFG"
+check_grep "Wofi XDG_DATA_DIRS" "XDG_DATA_DIRS" "$SWAY_CFG"
+check_grep "Clipman wofi PATH" "PATH=.*clipman.*wofi\|clipman store" "$SWAY_CFG"
+check_grep "Windsurf keybinding" "mod+w.*windsurf" "$SWAY_CFG"
+check_grep "Apps button click" "button1.*wofi" "$SWAY_CFG"
+check_grep "Antigravity keybinding" "antigravity" "$SWAY_CFG"
+check_grep "Snippet picker keybinding" "snippet-picker" "$SWAY_CFG"
+
+# =============================================================================
+# Shell Config
+# =============================================================================
+log ""
+log "--- Shell Config ---"
+ZSHRC="$HOME_DIR/.zshrc"
+check_grep "zshrc.local sourcing" "zshrc.local" "$ZSHRC"
+check_grep "Timezone Pacific" "America/Los_Angeles" "$ZSHRC"
+check_grep "Go PATH" "GOROOT" "$ZSHRC"
+check_grep "Rust PATH" "cargo/bin" "$ZSHRC"
+check_grep "pyenv init" "pyenv init" "$ZSHRC"
+check_grep "rbenv init" "rbenv init" "$ZSHRC"
+check_grep "Starship prompt" "starship init" "$ZSHRC"
+check_grep "Nix profile sourced" "nix-profile.*nix.sh\|nix.sh" "$ZSHRC"
+
+# =============================================================================
+# sway-status
+# =============================================================================
+log ""
+log "--- sway-status ---"
+SWAY_STATUS="$HOME_DIR/.local/bin/sway-status"
+check_grep "Apps block" "apps" "$SWAY_STATUS"
+check_grep "GPU block" "gpu" "$SWAY_STATUS"
+check_grep "CPU block" "cpu" "$SWAY_STATUS"
+check_grep "Memory block" "memory" "$SWAY_STATUS"
+check_grep "Disk block" "disk" "$SWAY_STATUS"
+check_grep "Clock block" "clock" "$SWAY_STATUS"
+check_grep "Network block" "network" "$SWAY_STATUS"
+
+# =============================================================================
+# Directory Structure
+# =============================================================================
+log ""
+log "--- Directory Structure ---"
+check_dir "GOPATH" "$HOME_DIR/gopath"
+check_dir "Go install" "$HOME_DIR/go/bin"
+check_dir "Cargo" "$HOME_DIR/.cargo/bin"
+check_dir "pyenv" "$HOME_DIR/.pyenv"
+check_dir "rbenv" "$HOME_DIR/.rbenv"
+check_dir "npm-global" "$HOME_DIR/.npm-global"
+check_dir "Nix profile" "$HOME_DIR/.nix-profile"
+
+# =============================================================================
+# Services (may not be running during boot script phase)
+# =============================================================================
+log ""
+log "--- Services ---"
+check_process "Sway" "sway$"
+check_process "swaybar" "swaybar"
+check_process "wayvnc" "wayvnc"
+check_process "Xwayland" "Xwayland"
+check_process "clipman" "clipman store"
+
+# =============================================================================
+# Summary
+# =============================================================================
+TOTAL=$((PASS+FAIL+WARN))
+log ""
+log "========================================"
+log "  TOTAL: $TOTAL | PASS: $PASS | FAIL: $FAIL | WARN: $WARN"
+log "========================================"
+
+# Write one-line summary
+echo "$(TZ=America/Los_Angeles date '+%Y-%m-%d %H:%M:%S %Z') | PASS: $PASS | FAIL: $FAIL | WARN: $WARN" > "$SUMMARY"
+
+# Set ownership
+chown -R $USER:$USER "$LOG_DIR"
