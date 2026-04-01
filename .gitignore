@@ -1,0 +1,8 @@
+# Secrets — never commit
+.env
+*.env
+*-sa-key.json
+
+# Build artifacts
+cloud-workstations
+.opencode/
