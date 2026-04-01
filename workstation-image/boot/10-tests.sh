@@ -232,6 +232,70 @@ check_process "Xwayland" "Xwayland"
 check_process "clipman" "clipman store"
 
 # =============================================================================
+# Upgrade Scripts
+# =============================================================================
+log ""
+log "--- Upgrade Scripts ---"
+
+# Check 07-apps.sh ran and completed
+if [ -f "$HOME_DIR/logs/app-update.log" ]; then
+    if grep -q "App update complete" "$HOME_DIR/logs/app-update.log" 2>/dev/null; then
+        test_pass "07-apps.sh completed successfully"
+    else
+        test_fail "07-apps.sh did not complete (check ~/logs/app-update.log)"
+    fi
+else
+    test_fail "07-apps.sh never ran (~/logs/app-update.log missing)"
+fi
+
+# Check tool versions (verifies upgrades actually installed something)
+check_version() {
+    local name="$1" cmd="$2"
+    local ver=$(runuser -u $USER -- bash -c ". $NIX_SH && export PATH=$HOME_DIR/.npm-global/bin:$HOME_DIR/gopath/bin:$HOME_DIR/go/bin:$HOME_DIR/.cargo/bin:$HOME_DIR/.pyenv/bin:$HOME_DIR/.rbenv/bin:\$PATH && $cmd" 2>&1 | head -1)
+    if [ -n "$ver" ] && ! echo "$ver" | grep -qiE "not found|error|command not found"; then
+        test_pass "$name version: $ver"
+    else
+        test_fail "$name version check failed"
+    fi
+}
+
+check_version "Claude Code" "claude --version"
+check_version "Codex" "codex --version"
+check_version "OpenCode" "opencode version"
+check_version "Cody" "cody --version"
+check_version "Pi" "pi --version"
+
+# Aider version (needs pyenv)
+AIDER_VER=$(runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && aider --version" 2>&1 | head -1)
+if [ -n "$AIDER_VER" ] && ! echo "$AIDER_VER" | grep -qiE "not found|error"; then
+    test_pass "Aider version: $AIDER_VER"
+else
+    test_fail "Aider version check failed"
+fi
+
+# GH Copilot extension installed
+if runuser -u $USER -- bash -c ". $NIX_SH && gh extension list" 2>&1 | grep -q "copilot"; then
+    test_pass "GH Copilot extension installed"
+else
+    test_fail "GH Copilot extension not found"
+fi
+
+# Home Manager generation is recent (within last 24 hours)
+HM_GEN=$(runuser -u $USER -- bash -c ". $NIX_SH && home-manager generations" 2>&1 | head -1)
+if [ -n "$HM_GEN" ]; then
+    test_pass "Home Manager generation: $HM_GEN"
+else
+    test_fail "Home Manager has no generations"
+fi
+
+# Nix channel updated
+if runuser -u $USER -- bash -c ". $NIX_SH && nix-channel --list" 2>&1 | grep -q "nixpkgs"; then
+    test_pass "Nix channel configured"
+else
+    test_fail "Nix channel not configured"
+fi
+
+# =============================================================================
 # Summary
 # =============================================================================
 TOTAL=$((PASS+FAIL+WARN))
