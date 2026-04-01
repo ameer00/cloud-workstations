@@ -426,10 +426,22 @@ cat > ~/.config/home-manager/home.nix << '"'"'NIXEOF'"'"'
   programs.home-manager.enable = true;
 
   home.packages = with pkgs; [
-    sway foot wofi thunar clipman wl-clipboard wayvnc mako
+    # Dev tools
+    neovim tmux tree ffmpeg git gh curl wget htop ripgrep fd jq unzip
+
+    # Browsers
     chromium google-chrome
-    neovim tmux tree zsh ripgrep fd jq ffmpeg
-    vscode
+
+    # IDEs
+    vscode jetbrains.idea-oss
+
+    # AI IDEs
+    code-cursor windsurf zed-editor
+
+    # Sway ecosystem
+    sway waybar foot wofi thunar grim slurp wl-clipboard clipman mako swaylock swayidle wayvnc
+
+    # Node.js for CLI tools
     nodejs_22
   ];
 }
@@ -506,6 +518,20 @@ cat "${REPO_DIR}/workstation-image/configs/waybar/style.css" | \
     ws_pipe "cat > ~/.config/waybar/style.css"
 test_pass "Waybar config deployed"
 
+# Deploy wofi config
+cat "${REPO_DIR}/workstation-image/configs/wofi/config" | \
+    ws_pipe "mkdir -p ~/.config/wofi && cat > ~/.config/wofi/config"
+cat "${REPO_DIR}/workstation-image/configs/wofi/style.css" | \
+    ws_pipe "cat > ~/.config/wofi/style.css"
+test_pass "Wofi config deployed"
+
+# Deploy snippet picker
+cat "${REPO_DIR}/workstation-image/scripts/snippet-picker" | \
+    ws_pipe "mkdir -p ~/.local/bin && cat > ~/.local/bin/snippet-picker && chmod +x ~/.local/bin/snippet-picker"
+cat "${REPO_DIR}/workstation-image/configs/snippets/snippets.conf" | \
+    ws_pipe "mkdir -p ~/.config/snippets && cat > ~/.config/snippets/snippets.conf"
+test_pass "Snippet picker deployed"
+
 # =========================================================================
 step "Step 14/19: Run initial setup"
 # =========================================================================
@@ -573,11 +599,23 @@ ws_ssh '
 export NPM_CONFIG_PREFIX=$HOME/.npm-global
 mkdir -p $HOME/.npm-global/bin
 
-npm install -g @anthropic-ai/claude-code @google/gemini-cli 2>/dev/null || true
+npm install -g @anthropic-ai/claude-code @google/gemini-cli @openai/codex @sourcegraph/cody @mariozechner/pi-coding-agent 2>/dev/null || true
 ' || true
 
 # Antigravity is pre-installed via apt in the Docker image (/usr/bin/antigravity).
 # No manual download needed.
+
+# Install OpenCode via go install
+ws_ssh 'export GOROOT=$HOME/go GOPATH=$HOME/gopath PATH=$GOROOT/bin:$GOPATH/bin:$PATH && go install github.com/opencode-ai/opencode@latest' || true
+test_pass "OpenCode installed"
+
+# Install aider via pip
+ws_ssh 'export PATH=$HOME/.pyenv/bin:$PATH && eval "$(pyenv init -)" && pip install aider-chat' || true
+test_pass "Aider installed"
+
+# Install gh copilot
+ws_ssh "${NIX_SOURCE}"' && gh extension install github/gh-copilot 2>/dev/null || true' || true
+test_pass "GitHub Copilot CLI installed"
 
 AI_VERIFY=$(ws_ssh '
 echo "claude=$(~/.npm-global/bin/claude --version 2>/dev/null | head -1)"
@@ -740,9 +778,11 @@ echo " Cloud Scheduler auto-starts daily at 7AM Pacific."
 echo " Connect via browser at the URL above (noVNC desktop)."
 echo ""
 echo " Installed: Sway (Tokyo Night), Nix, ZSH, Starship,"
-echo "   Operator Mono font, Chrome, VS Code, Antigravity,"
-echo "   Claude Code, Gemini CLI, 4 auto-launched workspaces"
-echo "   Go, Rust (rustup), Python (pyenv), Ruby (rbenv), Node.js (Nix)"
+echo "   Operator Mono font, Chrome, VS Code, IntelliJ, Windsurf,"
+echo "   Cursor, Zed, Antigravity, Claude Code, Gemini CLI,"
+echo "   Codex, Cody, OpenCode, Aider, gh-copilot, pi-coding-agent,"
+echo "   Go, Rust (rustup), Python (pyenv), Ruby (rbenv), Node.js (Nix),"
+echo "   Wofi app launcher, snippet picker, clipboard manager"
 echo "============================================="
 
 [ "$FAIL" -gt 0 ] && exit 1 || exit 0
