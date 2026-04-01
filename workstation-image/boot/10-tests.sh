@@ -95,8 +95,8 @@ check_binary "Codex" "codex"
 check_binary "OpenCode" "opencode"
 check_binary "Cody" "cody"
 check_binary "Pi" "pi"
-# Aider (pip, needs pyenv)
-if runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && which aider" >/dev/null 2>&1; then
+# Aider (pip, installed to ~/.local/bin)
+if runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=$HOME_DIR/.local/bin:\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && which aider" >/dev/null 2>&1; then
     test_pass "Aider (aider)"
 else
     test_fail "Aider (not found)"
@@ -265,8 +265,8 @@ check_version "OpenCode" "opencode -v"
 check_version "Cody" "cody --version"
 check_version "Pi" "pi --version"
 
-# Aider version (needs pyenv)
-AIDER_VER=$(runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && aider --version" 2>&1 | head -1)
+# Aider version (pip, installed to ~/.local/bin)
+AIDER_VER=$(runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=$HOME_DIR/.local/bin:\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && aider --version" 2>&1 | head -1)
 if [ -n "$AIDER_VER" ] && ! echo "$AIDER_VER" | grep -qiE "not found|error"; then
     test_pass "Aider version: $AIDER_VER"
 else
