@@ -48,7 +48,7 @@ steps:
 ```
 
 ## What the PO would see in Cloud Console
-- **ws-setup / gement03** — the orchestrator build
-- **docker-image / gement03** — the Docker image build
+- **ws-setup / YOUR_PROJECT_ID** — the orchestrator build
+- **docker-image / YOUR_PROJECT_ID** — the Docker image build
 
 Both tagged with the project ID for easy filtering.

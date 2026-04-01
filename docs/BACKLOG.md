@@ -110,7 +110,7 @@
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
 |----|---------|------|----------|--------|-------|--------|--------------|----------|
-| F-0048 | Repo split: private personal + public template | — | P0 | done | SWE-1, SWE-2, SWE-3 | main | — | Pushed personal repo to ameer-workstations (private). Templatized 38 files in cloud-workstations (public) with placeholders. Created scripts/configure.sh for colleague onboarding. Updated README with Quick Start + configure step. |
+| F-0048 | Repo split: private personal + public template | — | P0 | done | SWE-1, SWE-2, SWE-3 | main | — | Pushed personal repo to your-private-repo (private). Templatized 38 files in cloud-workstations (public) with placeholders. Created scripts/configure.sh for colleague onboarding. Updated README with Quick Start + configure step. |
 | F-0049 | Remove configure.sh, auto-detect REPO_URL | — | P1 | done | SWE-1 | main | F-0048 | Removed configure.sh (caused dirty git state on 38 files). ws.sh now auto-detects REPO_URL from git remote. README simplified to clone → ws.sh setup. |
 
 ---

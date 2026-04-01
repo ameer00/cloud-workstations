@@ -731,21 +731,21 @@
 ### Completed
 
 - **F-0048** (Repo split: private personal + public template):
-  - **Private repo**: Pushed current repo (with all personal info) to `ameer-workstations` (private) including all branches and tags (v1.3, v1.4)
+  - **Private repo**: Pushed current repo (with all personal info) to `your-private-repo` (private) including all branches and tags (v1.3, v1.4)
   - **Templatization**: Replaced all personal info across 38 files with generic placeholders:
-    - `gement01/02/03` → `YOUR_PROJECT_ID`
+    - `YOUR_PROJECT_ID/02/03` → `YOUR_PROJECT_ID`
     - `938099127340` → `YOUR_PROJECT_NUMBER`
-    - `ameerabbas.altostrat.com` → `your-org.example.com`
+    - `your-org.example.com` → `your-org.example.com`
     - `admin@...` → `admin@your-org.example.com`
-    - `ameer00@gmail.com` → `your-email@example.com`
-    - `Ameer Abbas` → `Your Name`
-    - `ameer00` (GitHub) → `your-github-username`
+    - `your-email@example.com` → `your-email@example.com`
+    - `Your Name` → `Your Name`
+    - `your-github-username` (GitHub) → `your-github-username`
   - **configure.sh**: Created `scripts/configure.sh` (221 lines) — onboarding script that prompts for 7 values, validates inputs, shows confirmation, runs sed replacements across all files, prints next steps
   - **README updated**: Added Quick Start section (clone → configure → setup), added Step 2 (configure.sh) between auth and setup
   - **Verified**: grep confirms zero remaining personal identifiers in tracked files
 
 ### Agent Team
-- SWE-1: Pushed to private repo (ameer-workstations)
+- SWE-1: Pushed to private repo (your-private-repo)
 - SWE-2: Templatized all 38 files
 - SWE-3: Created configure.sh + updated README
 
@@ -756,12 +756,12 @@
 - **F-0049** (Remove configure.sh): Eliminated separate configure.sh script that was modifying 38 tracked files and creating permanent dirty git state. ws.sh now auto-detects REPO_URL from `git remote get-url origin`. README simplified from 3 steps to 2 (clone → ws.sh setup). Repo stays clean with generic placeholders.
 
 ### Decisions
-- Two-repo approach: public template (cloud-workstations) + private personal (ameer-workstations)
+- Two-repo approach: public template (cloud-workstations) + private personal (your-private-repo)
 - Private repo added as `private` remote for easy syncing
 - configure.sh uses sed with proper escaping for special characters
 - Replacement order: specific patterns first (SA email) before generic (PROJECT_ID) to avoid double-replacement
 
 ### Next Steps
-- For daily work, use `ameer-workstations` (private repo with personal values)
+- For daily work, use `your-private-repo` (private repo with personal values)
 - To share improvements, cherry-pick from private to public repo
 - Colleagues: clone public repo → run configure.sh → run ws.sh setup

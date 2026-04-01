@@ -19,7 +19,7 @@
 Skip AR deletion in `ws.sh teardown`. Next setup detects existing image and skips Docker build. Image is ~280MB, pennies/month storage cost. Simplest change — one line.
 
 ### 2. Shared image in a central project
-Build Docker image once in gement01, reference from gement02/03. Teardown of other projects doesn't touch the image. Only rebuild when Dockerfile changes.
+Build Docker image once in YOUR_PROJECT_ID, reference from YOUR_PROJECT_ID/03. Teardown of other projects doesn't touch the image. Only rebuild when Dockerfile changes.
 
 ### 3. Skip cluster if exists (saves ~10 min)
 For re-setups without full teardown, check if cluster already exists and reuse it. Only create if missing.
@@ -58,7 +58,7 @@ Start with **#1 (keep AR on teardown)** + **#6 (ws.sh update command)**:
 
 ## Considerations for Multi-Project Setup
 
-The PO uses 3 projects (gement01/02/03) with identical workstations. Teardown deletes AR, destroying the cached image. Options:
+The PO uses 3 projects (YOUR_PROJECT_ID/02/03) with identical workstations. Teardown deletes AR, destroying the cached image. Options:
 - **Option A:** Don't delete AR on teardown (recommended — simplest)
-- **Option B:** Shared image in central project (gement01 hosts, others pull)
+- **Option B:** Shared image in central project (YOUR_PROJECT_ID hosts, others pull)
 - **Option C:** Public registry (Docker Hub / GHCR) — decoupled from project lifecycle

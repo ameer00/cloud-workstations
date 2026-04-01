@@ -97,7 +97,7 @@ All three bugs shared a common root cause: the nvidia `LD_LIBRARY_PATH=/var/lib/
 ### Added
 - **`scripts/configure.sh`** — Onboarding script for colleagues. Prompts for 7 values (GCP project, org, name, email, GitHub), validates inputs, and applies sed replacements across all config files
 - **README Quick Start** — Added 3-step quick start section and configure.sh step in setup flow
-- **Private repo backup** — Personal repo with all project-specific values pushed to `ameer-workstations` (private)
+- **Private repo backup** — Personal repo with all project-specific values pushed to `your-private-repo` (private)
 
 ### Changed
 - **Templatized 38 files** — Replaced all personal/org-specific info with generic placeholders (`YOUR_PROJECT_ID`, `your-email@example.com`, etc.) across CLAUDE.md, agent configs, skill configs, setup docs, specs, and scripts
