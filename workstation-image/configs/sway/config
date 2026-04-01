@@ -194,6 +194,9 @@ bar {
     font pango:monospace Bold 10
     status_command /home/user/.local/bin/sway-status
 
+    # Click on status area opens app launcher (◆ Apps button)
+    bindsym button1 exec env -u LD_LIBRARY_PATH XDG_DATA_DIRS=/home/user/.nix-profile/share:/usr/share:/usr/local/share /home/user/.nix-profile/bin/wofi --show drun --allow-images
+
     colors {
         background #1a1b26
         statusline #c0caf5
