@@ -1,5 +1,58 @@
 # Release Notes — Cloud Workstation
 
+## v1.10 — UX Polish: Wofi, Clipboard, Snippets (2026-04-01)
+
+### Added
+- **Wofi app launcher styling** — Created `~/.config/wofi/config` (drun mode, case-insensitive search, app icons) and `~/.config/wofi/style.css` with Tokyo Night theme (bg=#1a1b26, accent=#7aa2f7, text=#c0caf5, rounded corners, modern look)
+- **Snippet picker** (`~/.local/bin/snippet-picker`) — Wofi-based script that reads snippets from `~/.config/snippets/snippets.conf` (pipe-delimited `label | value` format), presents labels in a Wofi menu, and copies the selected snippet value to clipboard via `wl-copy`. Invoked with CTRL+SHIFT+S
+- **Default snippet config** (`~/.config/snippets/snippets.conf`) — Starter snippets for common text (email, commands, code patterns). User-editable; boot script preserves existing customizations (no-clobber)
+- **Boot scripts** — `09-wofi.sh` (deploys wofi config + style), `09-snippets.sh` (deploys snippet picker + default config with no-clobber)
+
+### Fixed
+- **Wofi app launcher (CTRL+SHIFT+R)** — Was only showing Antigravity because `XDG_DATA_DIRS` was empty in sway's environment. Fixed by setting `XDG_DATA_DIRS=/home/user/.nix-profile/share:/usr/share:/usr/local/share` and wrapping with `env -u LD_LIBRARY_PATH`. Now shows all Nix-installed and system apps
+- **Clipboard history daemon (CTRL+SHIFT+A)** — `wl-paste + clipman store` daemon was not starting due to nvidia `LD_LIBRARY_PATH` conflict breaking Nix binaries. Fixed by wrapping autostart with `env -u LD_LIBRARY_PATH`. Also fixed `clipman pick --tool` invocation: expects tool name (`wofi`) not full path, so added Nix bin to PATH in exec
+- **Snippet picker (CTRL+SHIFT+S)** — Keybinding existed but referenced a script (`~/.local/bin/snippet-picker`) that was never created. Script now exists and functions correctly
+
+### Not Shipped
+- **Waybar switch** — Attempted replacing swaybar with waybar but reverted: waybar uses wlr-layer-shell protocol which doesn't render through wayvnc in the headless Sway setup. Waybar config preserved in repo for future activation when layer-shell support is available. Swaybar remains the active bar
+
+---
+
+## v1.9 — Fix IDE Keybindings (2026-03-31)
+
+### Fixed
+- **IntelliJ keybinding (CTRL+SHIFT+M)** — binary name corrected from `idea-community` to `idea-oss` (matching Nix Home Manager package name). Added `DISPLAY=:0` so IntelliJ connects to system Xwayland instead of broken Nix-packaged Xwayland
+- **VSCode keybinding (CTRL+SHIFT+Y)** — wrapped exec with `env -u LD_LIBRARY_PATH` to prevent nvidia's `libGLESv2.so.2` from shadowing the Nix version (was causing `undefined symbol: _glapi_tls_Current` crash)
+- **Xwayland startup failure** — added `xwayland disable` to sway config to prevent Sway's built-in Xwayland (Nix binary) from starting under nvidia LD_LIBRARY_PATH, which caused `libX11.so.6: cannot open shared object file`. System Xwayland (`/usr/bin/Xwayland :0`) is launched explicitly instead
+
+### Root Cause
+All three bugs shared a common root cause: the nvidia `LD_LIBRARY_PATH=/var/lib/nvidia/lib64` set by `sway-desktop.service` injects nvidia GL libraries into the search path, shadowing Nix-provided libraries and breaking symbol resolution for Nix-built applications (Xwayland, VSCode/Electron). The fix applies per-app workarounds rather than changing the global GPU configuration.
+
+---
+
+## v1.8 — Programming Language Support (2026-03-31)
+
+### Added
+- **Go** (latest stable via direct tarball from go.dev) — installs to `~/go` (GOROOT) and `~/gopath` (GOPATH). Auto-detects latest version, updates on boot if newer available
+- **Rust** (via `rustup`) — installs stable toolchain to `~/.rustup` and `~/.cargo`. Runs `rustup update` on subsequent boots
+- **Python 3.12** (via `pyenv`) — compiles from source, installs to `~/.pyenv`. pyenv updated on boot; Python rebuild only on manual request
+- **Ruby 3.3** (via `rbenv` + `ruby-build`) — compiles from source, installs to `~/.rbenv`. rbenv/ruby-build updated on boot; Ruby rebuild only on manual request
+- **Boot script `07a-lang-deps.sh`** — installs apt build dependencies (build-essential, libssl-dev, zlib1g-dev, etc.) required by pyenv and rbenv to compile Python/Ruby from source
+- **Boot script `07b-languages.sh`** — idempotent language installer. First boot installs all 4 languages (~15 min for Python/Ruby compilation); subsequent boots verify and update version managers in under 30 seconds. Logs to `~/logs/language-install.log`
+- **Shell integration** — Go (GOROOT, GOPATH), Rust (~/.cargo/bin), pyenv init, and rbenv init added to `.zshrc` PATH
+- **Language version management docs** in README.md — covers installed languages, version managers, and how to install additional versions
+
+### Changed
+- **`cloud-build-setup.sh`** — expanded from 17 to 19 steps: Step 18 installs language build deps + version managers, Step 19 verifies all language binaries on PATH
+- **`setup.sh`** — updated glob pattern to support letter-suffixed boot scripts (`07a-*`, `07b-*`) in execution order
+
+### Architecture
+- **Hybrid approach**: Nix continues to manage system tools (ripgrep, neovim, tmux, VS Code, etc.), while native version managers handle programming languages for multi-version support and familiar developer workflows
+- **No /nix copy needed**: All language managers install entirely within `$HOME` on the 500GB persistent SSD, surviving reboots naturally
+- **Apt build deps are ephemeral**: Reinstalled on every boot by `07a-lang-deps.sh` since the Docker image is ephemeral; keeps the Docker image lean
+
+---
+
 ## v1.7 — Repo Templatization (2026-03-26)
 
 ### Added

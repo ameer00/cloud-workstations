@@ -1,7 +1,7 @@
 # Project Backlog — Cloud Workstation
 
 **Maintained by:** TPM
-**Last updated:** 2026-03-31
+**Last updated:** 2026-03-31 (Milestone 10 added)
 
 ---
 
@@ -125,6 +125,29 @@
 | F-0053 | Update cloud-build-setup.sh for first-time language install | F-0001-language-support | P0 | done | SWE-3 | feature/languages | F-0050, F-0051 | Added Step 15/19 (lang deps) and Step 16/19 (lang install + verification). Renumbered to 19 total steps. Commit fbc537b |
 | F-0054 | Update README.md with language documentation | F-0001-language-support | P1 | done | SWE-3 | feature/languages | F-0050 | Added Languages row to "What's Included" table + "Language Version Management" section with version switch commands. Commit fbc537b |
 | F-0055 | E2E test and verify language installations | F-0001-language-support | P0 | backlog | SWE-Test | — | F-0050, F-0052, F-0053 | Verify go/rustc/cargo/python/ruby on PATH, pyenv install works, gem install works, survives stop/start, tested on 2+ projects |
+
+---
+
+## Milestone 9: Fix IDE Keybindings
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0056 | Fix sway config IDE keybindings (IntelliJ + VSCode) | [F-0035](specs/F-0035-fix-ide-keybindings.md) | P0 | done | SWE-1 | feature/languages | F-0016, F-0017 | Fixed idea-community→idea-oss, added xwayland disable, set DISPLAY=:0 for IntelliJ, wrapped VSCode exec with env -u LD_LIBRARY_PATH. Commit 526ecbb |
+| F-0057 | Update boot scripts for idea-oss binary name | [F-0035](specs/F-0035-fix-ide-keybindings.md) | P0 | done | SWE-1 | feature/languages | F-0056 | No idea-community references found in boot scripts — only sway config needed fixing. Commit 526ecbb |
+| F-0058 | E2E verify IDE keybindings after fix | [F-0035](specs/F-0035-fix-ide-keybindings.md) | P0 | backlog | SWE-QA | — | F-0056, F-0057 | Pending: verify CTRL+SHIFT+M launches IntelliJ, CTRL+SHIFT+Y launches VSCode, no GL/library errors, tested on 2+ projects |
+
+---
+
+## Milestone 10: UX Polish (Wofi, Clipboard, Snippets, Waybar)
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0059 | Fix Wofi app launcher + categories + Tokyo Night styling | [F-0036](specs/F-0036-milestone-10-ux.md) | P1 | done | SWE-1 | feature/languages | F-0016, F-0017 | Fixed XDG_DATA_DIRS + env -u LD_LIBRARY_PATH in sway config. Created wofi/config + style.css (Tokyo Night). Created boot/09-wofi.sh to deploy configs. Commits e91bc08, ee67545 |
+| F-0060 | Fix CTRL+SHIFT+A clipboard history daemon | [F-0036](specs/F-0036-milestone-10-ux.md) | P1 | done | SWE-2 | feature/languages | F-0016 | Wrapped wl-paste + clipman autostart with env -u LD_LIBRARY_PATH, used full Nix paths, fixed clipman pick keybinding. Commit e91bc08 |
+| F-0061 | Fix CTRL+SHIFT+S snippet picker (new script) | [F-0036](specs/F-0036-milestone-10-ux.md) | P1 | done | SWE-2 | feature/languages | F-0060 | Created snippet-picker script + snippets.conf (Wofi-based, wl-copy). Created boot/09-snippets.sh (no-clobber on existing config). Commit e91bc08 |
+| F-0062 | Switch to Waybar + Apps dropdown | [F-0036](specs/F-0036-milestone-10-ux.md) | P1 | blocked | SWE-3 | feature/languages | F-0016, F-0059 | **Reverted (225aea7):** Waybar uses wlr-layer-shell protocol which doesn't render through wayvnc in headless Sway. Swaybar restored. Waybar config kept in repo for future activation. Apps dropdown needs alternative approach. |
+| F-0063 | E2E test and verify Milestone 10 UX features | [F-0036](specs/F-0036-milestone-10-ux.md) | P0 | backlog | SWE-QA | — | F-0059, F-0060, F-0061 | Pending: verify Wofi shows all apps, clipboard daemon running, snippet picker works, no regressions, tested on 2+ projects |
+| F-0064 | Fix clipman pick --tool invocation | [F-0036](specs/F-0036-milestone-10-ux.md) | P0 | done | team-lead | feature/languages | F-0060 | clipman --tool expects tool name ('wofi') not full path. Fixed by adding PATH=/home/user/.nix-profile/bin:$PATH. Commit 225aea7 |
 
 ---
 

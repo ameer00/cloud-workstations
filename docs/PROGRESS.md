@@ -1,5 +1,86 @@
 # Development Progress Log — Cloud Workstation
 
+## Session 14 — 2026-04-01
+
+### Goals
+- Execute Milestone 10: UX Polish — Wofi, Clipboard, Snippets, Waybar (F-0059 through F-0063)
+- Fix broken Wofi app launcher (missing XDG_DATA_DIRS, no config/styling)
+- Fix broken CTRL+SHIFT+A clipboard history daemon (nvidia LD_LIBRARY_PATH conflict)
+- Create CTRL+SHIFT+S snippet picker (script never existed)
+- Switch from swaybar to waybar with Apps dropdown button
+
+### Completed
+
+- **F-0059** (Fix Wofi app launcher + Tokyo Night styling): Fixed Wofi exec in sway config to set `XDG_DATA_DIRS=/home/user/.nix-profile/share:/usr/share:/usr/local/share` and wrap with `env -u LD_LIBRARY_PATH` so all Nix and system apps are discoverable. Created `workstation-image/configs/wofi/config` and `workstation-image/configs/wofi/style.css` with Tokyo Night palette. Created `workstation-image/boot/09-wofi.sh` to deploy wofi configs on boot. (SWE-1, commits e91bc08, ee67545)
+
+- **F-0060** (Fix CTRL+SHIFT+A clipboard history daemon): Wrapped `wl-paste -t text --watch clipman store` autostart with `env -u LD_LIBRARY_PATH` and full Nix binary paths. Clipboard daemon now starts and runs without nvidia library conflicts. (SWE-2, commit e91bc08)
+
+- **F-0064** (Fix clipman pick --tool invocation): `clipman pick --tool` expects tool name (`wofi`), not full path (`$nix/wofi`). Fixed by adding `PATH=/home/user/.nix-profile/bin:$PATH` to exec command so clipman can find wofi by name. (team-lead, commit 225aea7)
+
+- **F-0061** (Fix CTRL+SHIFT+S snippet picker): Created `workstation-image/scripts/snippet-picker` — Wofi-based script that reads `~/.config/snippets/snippets.conf` (pipe-delimited `label | value` format), copies selected value to clipboard via `wl-copy`. Created `workstation-image/boot/09-snippets.sh` (no-clobber on existing snippets.conf). (SWE-2, commit e91bc08)
+
+### Not Shipped
+
+- **F-0062** (Switch to Waybar + Apps dropdown): **Reverted.** Waybar uses wlr-layer-shell protocol which doesn't render through wayvnc in headless Sway setup. Swaybar restored (commit 225aea7). Waybar config kept in repo for future activation. Apps dropdown needs alternative approach (e.g., swaybar click event or dedicated keybinding).
+
+### Key Decisions
+- **Per-invocation `env -u LD_LIBRARY_PATH`** workaround for all Nix binary invocations from sway — consistent pattern from Milestone 9
+- **`XDG_DATA_DIRS`** must be explicitly set since wayvnc headless sessions don't populate it
+- **Snippet config no-clobber** — boot script preserves existing user customizations
+- **Waybar blocked by wayvnc** — wlr-layer-shell surfaces don't render through VNC. Swaybar remains the only viable bar for headless wayvnc. Waybar config preserved for when layer-shell support becomes available
+- **clipman --tool** expects a tool name, not a full path — need PATH manipulation for Nix binaries
+
+### Pipeline
+- PM created spec (F-0036-milestone-10-ux.md) with 4 features
+- TPM created backlog items (F-0059 through F-0063) in Milestone 10
+- 3 SWEs ran in parallel: SWE-1 (wofi), SWE-2 (clipboard/snippets), SWE-3 (waybar)
+- Post-deployment testing found waybar doesn't render via wayvnc — reverted to swaybar
+- Post-deployment testing found clipman --tool bug — fixed
+
+### Next Steps
+- Brainstorm alternative Apps dropdown approach (swaybar doesn't support custom click modules — need creative solution)
+- F-0063: E2E test Milestone 10 features (wofi, clipboard, snippets)
+- F-0055/F-0058: E2E test carryovers from Milestones 8 and 9
+- Tag v1.10 release after PO approval
+
+---
+
+## Session 13 — 2026-03-31
+
+### Goals
+- Execute Milestone 9: Fix IDE Keybindings (F-0056 through F-0058)
+- Fix broken CTRL+SHIFT+M (IntelliJ) and CTRL+SHIFT+Y (VSCode) keybindings in sway config
+
+### Completed
+
+- **F-0056** (Fix sway config IDE keybindings): Fixed 3 bugs in `workstation-image/configs/sway/config`:
+  1. IntelliJ binary name `idea-community` changed to `idea-oss` (matching Nix Home Manager package)
+  2. Added `xwayland disable` directive + explicit `DISPLAY=:0` for IntelliJ exec (uses system `/usr/bin/Xwayland :0` instead of broken Nix Xwayland)
+  3. Wrapped VSCode exec with `env -u LD_LIBRARY_PATH` to prevent nvidia GL library conflict
+  - Root cause: nvidia `LD_LIBRARY_PATH=/var/lib/nvidia/lib64` from sway-desktop.service shadows Nix-provided libraries, breaking Xwayland (libX11 not found) and VSCode (libGLESv2 symbol mismatch)
+  - (SWE-1, commit 526ecbb)
+
+- **F-0057** (Boot script check): Verified no `idea-community` references in boot scripts (08-workspaces.sh or others) — only the sway config needed fixing. (SWE-1, commit 526ecbb)
+
+- **F-0058** (E2E verification): Pending — requires testing on actual workstation to verify CTRL+SHIFT+M/Y work without errors
+
+### Key Decisions
+- **Per-app workaround** (not global fix): Clearing LD_LIBRARY_PATH for VSCode and using system Xwayland for IntelliJ avoids changing the sway-desktop.service GPU setup that other apps depend on
+- **xwayland disable** prevents Sway's built-in Xwayland (Nix binary) from starting, which would fail under nvidia LD_LIBRARY_PATH
+
+### Pipeline
+- PM created spec (F-0035-fix-ide-keybindings.md)
+- TPM created 3 backlog items (F-0056 through F-0058) in Milestone 9
+- SWE-1 implemented sway config fix
+- E2E verification pending (SWE-QA)
+
+### Next Steps
+- F-0058: E2E verify IDE keybindings on actual workstation (2+ projects)
+- F-0055: E2E test language installations (Milestone 8 carryover)
+- Tag v1.9 release after PO approval
+
+---
+
 ## Session 12 — 2026-03-31
 
 ### Goals
