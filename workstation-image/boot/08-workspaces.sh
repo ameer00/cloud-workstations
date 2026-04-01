@@ -64,6 +64,20 @@ if [ "${WINDOW_COUNT:-0}" -gt 1 ]; then
     exit 0
 fi
 
+# --- Start Xwayland for X11 apps (IntelliJ) ---
+if ! pgrep -f "Xwayland :0" >/dev/null 2>&1; then
+    log "Starting Xwayland on :0..."
+    sway_cmd exec "/usr/bin/Xwayland :0" 2>/dev/null
+    sleep 2
+    if pgrep -f "Xwayland :0" >/dev/null 2>&1; then
+        log "Xwayland started on :0"
+    else
+        log "WARNING: Xwayland failed to start"
+    fi
+else
+    log "Xwayland already running on :0"
+fi
+
 # --- Launch app and wait for its window to appear on the workspace ---
 launch_and_wait() {
     local ws="$1"
