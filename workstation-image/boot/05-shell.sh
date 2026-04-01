@@ -118,6 +118,11 @@ fi
 if command -v starship &>/dev/null; then
     eval "$(starship init zsh)"
 fi
+
+# User customizations (survives boot — never overwritten)
+if [ -f "$HOME/.zshrc.local" ]; then
+    source "$HOME/.zshrc.local"
+fi
 ZSHEOF
 chown $USER:$USER "$ZSHRC"
 log "Created .zshrc"
