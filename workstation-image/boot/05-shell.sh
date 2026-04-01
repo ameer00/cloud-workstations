@@ -117,6 +117,26 @@ if command -v rbenv &>/dev/null; then
     eval "$(rbenv init -)"
 fi
 
+# tmux quick sessions (create or attach)
+alias t1="tmux new-session -A -s 1"
+alias t2="tmux new-session -A -s 2"
+alias t3="tmux new-session -A -s 3"
+alias t4="tmux new-session -A -s 4"
+alias t5="tmux new-session -A -s 5"
+alias t6="tmux new-session -A -s 6"
+alias t7="tmux new-session -A -s 7"
+alias t8="tmux new-session -A -s 8"
+alias t9="tmux new-session -A -s 9"
+alias t10="tmux new-session -A -s 10"
+
+# tmux utility
+alias ta="tmux attach"
+alias tl="tmux list-sessions"
+alias tk="tmux kill-session -t"
+alias td="tmux detach"
+alias tn="tmux new-session"
+alias ts="tmux switch-client -t"
+
 # Starship prompt
 if command -v starship &>/dev/null; then
     eval "$(starship init zsh)"

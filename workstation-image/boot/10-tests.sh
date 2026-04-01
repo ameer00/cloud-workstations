@@ -159,6 +159,7 @@ check_file "Snippet picker" "$HOME_DIR/.local/bin/snippet-picker"
 check_file "Snippets conf" "$HOME_DIR/.config/snippets/snippets.conf"
 check_file "sway-status" "$HOME_DIR/.local/bin/sway-status"
 check_file "Sway config" "$HOME_DIR/.config/sway/config"
+check_file "tmux.conf" "$HOME_DIR/.tmux.conf"
 check_file ".zshrc" "$HOME_DIR/.zshrc"
 check_file ".env" "$HOME_DIR/.env"
 
@@ -191,6 +192,7 @@ check_grep "Rust PATH" "cargo/bin" "$ZSHRC"
 check_grep "pyenv init" "pyenv init" "$ZSHRC"
 check_grep "rbenv init" "rbenv init" "$ZSHRC"
 check_grep "Starship prompt" "starship init" "$ZSHRC"
+check_grep "tmux aliases" "tmux new-session" "$ZSHRC"
 check_grep "Nix profile sourced" "nix-profile.*nix.sh\|nix.sh" "$ZSHRC"
 
 # =============================================================================
