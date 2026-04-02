@@ -870,9 +870,11 @@ step "Step 19/19: Verify noVNC desktop access"
 # =========================================================================
 # The full chain: Sway (compositor) → wayvnc (VNC on :5901) → noVNC (port 80)
 # Wait for services to stabilize after boot script setup
-log "Waiting for Sway + wayvnc to start (up to 60s)..."
+# Ensure Sway services are started (they may not auto-start after boot script setup)
+ws_ssh 'sudo systemctl daemon-reload && sudo systemctl start sway-desktop wayvnc 2>/dev/null; true' 2>/dev/null || true
+log "Waiting for Sway + wayvnc to start (up to 120s)..."
 NOVNC_READY=false
-for i in $(seq 1 12); do
+for i in $(seq 1 24); do
     VNC_CHECK=$(ws_ssh '
 echo "sway=$(pgrep -c sway 2>/dev/null || echo 0)"
 echo "wayvnc=$(ss -tlnp 2>/dev/null | grep -c 5901 || echo 0)"
