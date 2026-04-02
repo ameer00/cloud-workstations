@@ -325,6 +325,7 @@ elif [ "$COMMAND" = "teardown" ]; then
     echo "   - Cloud NAT: ws-nat + Cloud Router: ws-router"
     echo "   - Cloud Scheduler: ws-weekday-start, ws-weekday-stop"
     echo "   - Cloud Function: ws-email-notify (if exists)"
+    echo "   - Cloud Build jobs: cancel any running/queued builds"
     echo ""
 
     if [ "$SKIP_CONFIRM" = false ]; then
@@ -507,6 +508,32 @@ elif [ "$COMMAND" = "teardown" ]; then
         fi
     else
         log "  Cloud Functions API not enabled — skipping"
+    fi
+
+    # 9. Cancel all running/queued Cloud Builds
+    log "Cancelling running Cloud Build jobs..."
+    if api_enabled "cloudbuild.googleapis.com"; then
+        RUNNING_BUILDS=$(gcloud builds list --project="$PROJECT_ID" --region="$REGION" \
+            --filter="status=WORKING OR status=QUEUED" --format="value(id)" 2>/dev/null)
+        if [ -n "$RUNNING_BUILDS" ]; then
+            for BUILD_ID in $RUNNING_BUILDS; do
+                gcloud builds cancel "$BUILD_ID" --project="$PROJECT_ID" --region="$REGION" 2>/dev/null || true
+                log "  Cancelled $BUILD_ID"
+            done
+            # Verify no builds still running
+            sleep 5
+            REMAINING=$(gcloud builds list --project="$PROJECT_ID" --region="$REGION" \
+                --filter="status=WORKING OR status=QUEUED" --format="value(id)" 2>/dev/null | wc -l)
+            if [ "$REMAINING" -eq 0 ]; then
+                log "  All builds cancelled"
+            else
+                log "  WARN: $REMAINING builds still running"
+            fi
+        else
+            log "  No running builds"
+        fi
+    else
+        log "  Cloud Build API not enabled — skipping"
     fi
 
     echo ""
