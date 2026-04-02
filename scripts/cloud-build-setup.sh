@@ -598,6 +598,18 @@ cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/ho
 }
 NIXEOF
 
+# Deploy config files referenced by home.nix (must exist before home-manager switch)
+log "  Deploying home-manager source configs..."
+cat "${REPO_DIR}/workstation-image/configs/nvim/init.lua" | \
+    ws_pipe "cat > ~/.config/home-manager/nvim-init.lua"
+cat "${REPO_DIR}/workstation-image/configs/sway/config" | \
+    ws_pipe "cat > ~/.config/home-manager/sway-config"
+cat "${REPO_DIR}/workstation-image/configs/waybar/config.jsonc" | \
+    ws_pipe "cat > ~/.config/home-manager/waybar-config.json"
+cat "${REPO_DIR}/workstation-image/configs/waybar/style.css" | \
+    ws_pipe "cat > ~/.config/home-manager/waybar-style.css"
+test_pass "Home Manager source configs deployed"
+
 # Run home-manager switch (long but isolated)
 log "  Running home-manager switch (this is the slow part)..."
 if ! ws_ssh_long "${NIX_SOURCE}"' && home-manager switch'; then
@@ -605,9 +617,10 @@ if ! ws_ssh_long "${NIX_SOURCE}"' && home-manager switch'; then
     notify_and_fail "Home Manager switch"
 fi
 
-# Verify key packages
+# Verify key packages (check for actual version output, not just labels)
 VERIFY=$(ws_ssh "${NIX_SOURCE}"' && echo "sway=$(sway --version 2>/dev/null | head -1)" && echo "nvim=$(nvim --version 2>/dev/null | head -1)" && echo "node=$(node --version 2>/dev/null)"')
-echo "$VERIFY" | grep -q "sway" && test_pass "Sway installed" || test_warn "Sway not verified"
+log "  Package versions: $(echo "$VERIFY" | tr '\n' ' ')"
+echo "$VERIFY" | grep -q "sway=sway version" && test_pass "Sway installed" || test_warn "Sway not verified (binary missing or not on PATH)"
 echo "$VERIFY" | grep -q "NVIM" && test_pass "Neovim installed" || test_warn "Neovim not verified"
 echo "$VERIFY" | grep -q "v22" && test_pass "Node.js installed" || test_warn "Node.js not verified"
 
@@ -869,9 +882,27 @@ fi
 step "Step 19/19: Verify noVNC desktop access"
 # =========================================================================
 # The full chain: Sway (compositor) → wayvnc (VNC on :5901) → noVNC (port 80)
-# Wait for services to stabilize after boot script setup
-# Ensure Sway services are started (they may not auto-start after boot script setup)
-ws_ssh 'sudo systemctl daemon-reload && sudo systemctl start sway-desktop wayvnc 2>/dev/null; true' 2>/dev/null || true
+# 03-sway.sh should have started services, but verify and retry if needed
+
+# Pre-check: verify sway binary exists before trying to start services
+SWAY_BIN_CHECK=$(ws_ssh 'ls -la /home/user/.nix-profile/bin/sway 2>&1' 2>/dev/null || echo "not found")
+if echo "$SWAY_BIN_CHECK" | grep -q "No such file\|not found"; then
+    log "WARNING: Sway binary not found at /home/user/.nix-profile/bin/sway"
+    log "  Home Manager may not have installed packages. Checking home-path..."
+    HM_CHECK=$(ws_ssh 'ls /home/user/.local/state/nix/profiles/home-manager/home-path/bin/ 2>/dev/null | wc -l' 2>/dev/null || echo "0")
+    log "  Home Manager home-path has ${HM_CHECK} binaries"
+fi
+
+# Ensure systemd has picked up service files and try to start
+log "Ensuring Sway services are started..."
+SWAY_START=$(ws_ssh 'sudo systemctl daemon-reload && sudo systemctl start sway-desktop wayvnc 2>&1' 2>/dev/null || echo "start failed")
+if echo "$SWAY_START" | grep -qi "fail\|error"; then
+    log "WARNING: Service start returned: $SWAY_START"
+    # Check service status for diagnostics
+    SWAY_STATUS=$(ws_ssh 'sudo systemctl status sway-desktop --no-pager -l 2>&1 | tail -5' 2>/dev/null || echo "unknown")
+    log "  sway-desktop status: $SWAY_STATUS"
+fi
+
 log "Waiting for Sway + wayvnc to start (up to 120s)..."
 NOVNC_READY=false
 for i in $(seq 1 24); do
@@ -894,8 +925,8 @@ if [ "$NOVNC_READY" = true ]; then
     test_pass "wayvnc listening on port 5901"
     test_pass "noVNC listening on port 80"
 else
-    # Report individual results
-    echo "$VNC_CHECK" | grep -q "sway=[1-9]" && test_pass "Sway compositor running" || test_fail "Sway not running"
+    # Report individual results with diagnostics
+    echo "$VNC_CHECK" | grep -q "sway=[1-9]" && test_pass "Sway compositor running" || test_fail "Sway not running (check: is /home/user/.nix-profile/bin/sway present?)"
     echo "$VNC_CHECK" | grep -q "wayvnc=[1-9]" && test_pass "wayvnc on port 5901" || test_fail "wayvnc not on port 5901"
     echo "$VNC_CHECK" | grep -q "novnc=[1-9]" && test_pass "noVNC on port 80" || test_fail "noVNC not on port 80"
 fi

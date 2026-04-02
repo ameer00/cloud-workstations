@@ -109,3 +109,18 @@ rm -f /etc/systemd/system/tigervnc.service
 ln -s /dev/null /etc/systemd/system/tigervnc.service
 pkill -f Xtigervnc 2>/dev/null || true
 log "Disabled and masked TigerVNC (port 5901 now served by wayvnc)"
+
+# --- Reload systemd and start services ---
+systemctl daemon-reload
+log "Reloaded systemd daemon"
+
+# Start sway-desktop (wayvnc depends on it and will start after)
+if [ -x /home/user/.nix-profile/bin/sway ]; then
+    systemctl start sway-desktop || log "WARNING: sway-desktop failed to start (will retry on next boot)"
+    # Give sway a moment to initialize before starting wayvnc
+    sleep 2
+    systemctl start wayvnc || log "WARNING: wayvnc failed to start (will retry on next boot)"
+    log "Started sway-desktop and wayvnc services"
+else
+    log "WARNING: /home/user/.nix-profile/bin/sway not found — skipping service start (run home-manager switch first)"
+fi
