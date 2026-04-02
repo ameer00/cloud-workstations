@@ -465,12 +465,13 @@ fi
 log "  Deploying home.nix..."
 cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/home-manager/home.nix"
 { config, pkgs, ... }:
+
 {
+  nixpkgs.config.allowUnfree = true;
+
   home.username = "user";
   home.homeDirectory = "/home/user";
-  home.stateVersion = "24.11";
-  nixpkgs.config.allowUnfree = true;
-  programs.home-manager.enable = true;
+  home.stateVersion = "25.11";
 
   home.packages = with pkgs; [
     # Dev tools
@@ -491,6 +492,44 @@ cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/ho
     # Node.js for CLI tools
     nodejs_22
   ];
+
+  programs.zsh = {
+    enable = true;
+    enableCompletion = true;
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+    shellAliases = { ll = "ls -la"; vim = "nvim"; vi = "nvim"; };
+    initContent = ''
+      if [ -e $HOME/.nix-profile/etc/profile.d/nix.sh ]; then . $HOME/.nix-profile/etc/profile.d/nix.sh; fi
+      if [ -e $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh ]; then . $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh; fi
+      export PATH=/var/lib/nvidia/bin:$PATH
+      export LD_LIBRARY_PATH=/var/lib/nvidia/lib64:$LD_LIBRARY_PATH
+      [ -f $HOME/.env ] && . $HOME/.env
+      [ -f $HOME/.zsh/zsh_aliases.sh ] && . $HOME/.zsh/zsh_aliases.sh
+    '';
+  };
+
+  home.file.".config/nvim/init.lua".source = /home/user/.config/home-manager/nvim-init.lua;
+  home.file.".config/sway/config".source = /home/user/.config/home-manager/sway-config;
+  home.file.".config/waybar/config".source = /home/user/.config/home-manager/waybar-config.json;
+  home.file.".config/waybar/style.css".source = /home/user/.config/home-manager/waybar-style.css;
+  home.file.".config/foot/foot.ini".text = ''
+    [main]
+    font=monospace:size=11
+    [colors]
+    background=1a1b26
+    foreground=c0caf5
+  '';
+
+  home.sessionVariables = {
+    EDITOR = "nvim";
+    VISUAL = "nvim";
+    BROWSER = "chromium";
+  };
+
+  programs.starship.enable = true;
+
+  programs.home-manager.enable = true;
 }
 NIXEOF
 

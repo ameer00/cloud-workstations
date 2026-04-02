@@ -280,7 +280,7 @@ check_version "Cody" "cody --version"
 check_version "Pi" "pi --version"
 
 # Aider version (pip, installed to ~/.local/bin)
-AIDER_VER=$(runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=$HOME_DIR/.local/bin:\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && aider --version" 2>&1 | head -1)
+AIDER_VER=$(runuser -u $USER -- bash -c "export PATH=$HOME_DIR/.local/bin:$HOME_DIR/.pyenv/bin:\$PATH && aider --version" 2>&1 | head -1)
 if [ -n "$AIDER_VER" ] && ! echo "$AIDER_VER" | grep -qiE "not found|error"; then
     test_pass "Aider version: $AIDER_VER"
 else
@@ -288,7 +288,7 @@ else
 fi
 
 # GH Copilot extension installed
-if runuser -u $USER -- bash -c ". $NIX_SH && gh extension list" 2>&1 | grep -q "copilot"; then
+if [ -d "$HOME_DIR/.local/share/gh/extensions/gh-copilot" ] || runuser -u $USER -- bash -c ". $NIX_SH && gh extension list" 2>&1 | grep -q "copilot"; then
     test_pass "GH Copilot extension installed"
 else
     test_fail "GH Copilot extension not found"
