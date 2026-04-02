@@ -513,10 +513,11 @@ cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/ho
       t9 = "claude-tmux 9";
       t10 = "claude-tmux 10";
       cc = "claude-tmux";
+      tdbg = "tmux-debug 1";
       ta = "tmux attach";
       tl = "tmux list-sessions";
       tk = "tmux kill-session -t";
-      td = "tmux detach";
+      tdt = "tmux detach";
       tn = "tmux new-session";
       ts = "tmux switch-client -t";
     };
@@ -564,6 +565,9 @@ cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/ho
       if command -v starship &>/dev/null; then
           eval "$(starship init zsh)"
       fi
+
+      # Custom aliases
+      [ -f $HOME/.zsh/zsh_aliases.sh ] && . $HOME/.zsh/zsh_aliases.sh
 
       # User customizations
       [ -f $HOME/.zshrc.local ] && . $HOME/.zshrc.local
