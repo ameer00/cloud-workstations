@@ -47,9 +47,12 @@ else
     log "zsh-autosuggestions already installed"
 fi
 
-# --- Create .zshrc ---
+# --- Create .zshrc (skip if Home Manager manages it) ---
 ZSHRC="$HOME_DIR/.zshrc"
-cat > "$ZSHRC" << 'ZSHEOF'
+if [ -L "$ZSHRC" ] && readlink "$ZSHRC" | grep -q "nix/store"; then
+    log ".zshrc is managed by Home Manager — skipping creation"
+else
+    cat > "$ZSHRC" << 'ZSHEOF'
 # =============================================================================
 # ZSH Configuration — Cloud Workstation
 # =============================================================================
@@ -147,5 +150,6 @@ if [ -f "$HOME/.zshrc.local" ]; then
     source "$HOME/.zshrc.local"
 fi
 ZSHEOF
-chown $USER:$USER "$ZSHRC"
-log "Created .zshrc"
+    chown $USER:$USER "$ZSHRC"
+    log "Created .zshrc"
+fi

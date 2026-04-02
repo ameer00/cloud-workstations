@@ -498,14 +498,74 @@ cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/ho
     enableCompletion = true;
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
-    shellAliases = { ll = "ls -la"; vim = "nvim"; vi = "nvim"; };
+    shellAliases = {
+      ll = "ls -la";
+      vim = "nvim";
+      vi = "nvim";
+      t1 = "tmux new-session -A -s 1";
+      t2 = "tmux new-session -A -s 2";
+      t3 = "tmux new-session -A -s 3";
+      t4 = "tmux new-session -A -s 4";
+      t5 = "tmux new-session -A -s 5";
+      t6 = "tmux new-session -A -s 6";
+      t7 = "tmux new-session -A -s 7";
+      t8 = "tmux new-session -A -s 8";
+      t9 = "tmux new-session -A -s 9";
+      t10 = "tmux new-session -A -s 10";
+      ta = "tmux attach";
+      tl = "tmux list-sessions";
+      tk = "tmux kill-session -t";
+      td = "tmux detach";
+      tn = "tmux new-session";
+      ts = "tmux switch-client -t";
+    };
     initContent = ''
+      # Nix profile
       if [ -e $HOME/.nix-profile/etc/profile.d/nix.sh ]; then . $HOME/.nix-profile/etc/profile.d/nix.sh; fi
       if [ -e $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh ]; then . $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh; fi
-      export PATH=/var/lib/nvidia/bin:$PATH
+
+      # Timezone
+      export TZ="America/Los_Angeles"
+
+      # PATH additions
+      export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:/var/lib/nvidia/bin:$PATH"
       export LD_LIBRARY_PATH=/var/lib/nvidia/lib64:$LD_LIBRARY_PATH
-      [ -f $HOME/.env ] && . $HOME/.env
-      [ -f $HOME/.zsh/zsh_aliases.sh ] && . $HOME/.zsh/zsh_aliases.sh
+
+      # Go
+      export GOROOT="$HOME/go"
+      export GOPATH="$HOME/gopath"
+      export PATH="$GOROOT/bin:$GOPATH/bin:$PATH"
+
+      # Rust
+      export PATH="$HOME/.cargo/bin:$PATH"
+
+      # pyenv
+      export PYENV_ROOT="$HOME/.pyenv"
+      export PATH="$PYENV_ROOT/bin:$PATH"
+      if command -v pyenv &>/dev/null; then
+          eval "$(pyenv init -)"
+      fi
+
+      # rbenv
+      export PATH="$HOME/.rbenv/bin:$PATH"
+      if command -v rbenv &>/dev/null; then
+          eval "$(rbenv init -)"
+      fi
+
+      # Source environment
+      if [ -f $HOME/.env ]; then
+          set -a
+          . $HOME/.env
+          set +a
+      fi
+
+      # Starship prompt
+      if command -v starship &>/dev/null; then
+          eval "$(starship init zsh)"
+      fi
+
+      # User customizations
+      [ -f $HOME/.zshrc.local ] && . $HOME/.zshrc.local
     '';
   };
 

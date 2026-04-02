@@ -196,16 +196,21 @@ check_grep "Snippet picker keybinding" "snippet-picker" "$SWAY_CFG"
 # =============================================================================
 log ""
 log "--- Shell Config ---"
-ZSHRC="$HOME_DIR/.zshrc"
-check_grep "zshrc.local sourcing" "zshrc.local" "$ZSHRC"
-check_grep "Timezone Pacific" "America/Los_Angeles" "$ZSHRC"
-check_grep "Go PATH" "GOROOT" "$ZSHRC"
-check_grep "Rust PATH" "cargo/bin" "$ZSHRC"
-check_grep "pyenv init" "pyenv init" "$ZSHRC"
-check_grep "rbenv init" "rbenv init" "$ZSHRC"
-check_grep "Starship prompt" "starship init" "$ZSHRC"
-check_grep "tmux aliases" "tmux new-session" "$ZSHRC"
-check_grep "Nix profile sourced" "nix-profile.*nix.sh\|nix.sh" "$ZSHRC"
+HM_NIX="$HOME_DIR/.config/home-manager/home.nix"
+if [ -f "$HM_NIX" ]; then
+    ZSHRC_SOURCE="$HM_NIX"
+else
+    ZSHRC_SOURCE="$HOME_DIR/.zshrc"
+fi
+check_grep "zshrc.local sourcing" "zshrc.local" "$ZSHRC_SOURCE"
+check_grep "Timezone Pacific" "America/Los_Angeles" "$ZSHRC_SOURCE"
+check_grep "Go PATH" "GOROOT" "$ZSHRC_SOURCE"
+check_grep "Rust PATH" "cargo/bin" "$ZSHRC_SOURCE"
+check_grep "pyenv init" "pyenv init" "$ZSHRC_SOURCE"
+check_grep "rbenv init" "rbenv init" "$ZSHRC_SOURCE"
+check_grep "Starship prompt" "starship init" "$ZSHRC_SOURCE"
+check_grep "tmux aliases" "tmux new-session" "$ZSHRC_SOURCE"
+check_grep "Nix profile sourced" "nix-profile.*nix.sh\|nix.sh" "$ZSHRC_SOURCE"
 
 # =============================================================================
 # sway-status
@@ -279,8 +284,8 @@ check_version "OpenCode" "opencode -v"
 check_version "Cody" "cody --version"
 check_version "Pi" "pi --version"
 
-# Aider version (pip, installed to ~/.local/bin)
-AIDER_VER=$(runuser -u $USER -- bash -c "export PATH=$HOME_DIR/.local/bin:$HOME_DIR/.pyenv/bin:\$PATH && aider --version" 2>&1 | head -1)
+# Aider version (pip, installed to ~/.local/bin — needs pyenv for Python)
+AIDER_VER=$(runuser -u $USER -- bash -c "export PYENV_ROOT=$HOME_DIR/.pyenv && export PATH=$HOME_DIR/.local/bin:\$PYENV_ROOT/bin:\$PATH && eval \"\$(pyenv init -)\" && aider --version" 2>&1 | head -1)
 if [ -n "$AIDER_VER" ] && ! echo "$AIDER_VER" | grep -qiE "not found|error"; then
     test_pass "Aider version: $AIDER_VER"
 else
@@ -290,6 +295,8 @@ fi
 # GH Copilot extension installed
 if [ -d "$HOME_DIR/.local/share/gh/extensions/gh-copilot" ] || runuser -u $USER -- bash -c ". $NIX_SH && gh extension list" 2>&1 | grep -q "copilot"; then
     test_pass "GH Copilot extension installed"
+elif ! runuser -u $USER -- bash -c ". $NIX_SH && gh auth status" >/dev/null 2>&1; then
+    test_warn "GH Copilot extension (gh not authenticated)"
 else
     test_fail "GH Copilot extension not found"
 fi
