@@ -355,6 +355,22 @@ elif [ "$COMMAND" = "teardown" ]; then
         fi
     }
 
+    # Wait for a resource to be fully deleted (poll until describe fails)
+    wait_deleted() {
+        local desc_cmd="$1" name="$2" max_wait="${3:-300}"
+        local elapsed=0
+        while [ $elapsed -lt $max_wait ]; do
+            if ! eval "$desc_cmd" >/dev/null 2>&1; then
+                return 0  # Resource is gone
+            fi
+            log "  Waiting for $name to be deleted ($elapsed/${max_wait}s)..."
+            sleep 15
+            elapsed=$((elapsed + 15))
+        done
+        log "  WARN: $name may not be fully deleted after ${max_wait}s"
+        return 1
+    }
+
     # Check if a GCP API is enabled before attempting operations that depend on it
     api_enabled() {
         timeout 15 gcloud services list --enabled --project="$PROJECT_ID" \
@@ -374,6 +390,7 @@ elif [ "$COMMAND" = "teardown" ]; then
                 --config="$CONFIG" --cluster="$CLUSTER" --region="$REGION" \
                 --project="$PROJECT_ID" --quiet || log "  WARN: delete may have timed out"
             log "  Deleted"
+            wait_deleted "gcloud_timeout 15 gcloud workstations describe $WORKSTATION --config=$CONFIG --cluster=$CLUSTER --region=$REGION --project=$PROJECT_ID" "workstation" 120
         else
             log "  Not found — skipping"
         fi
@@ -390,6 +407,7 @@ elif [ "$COMMAND" = "teardown" ]; then
                 --cluster="$CLUSTER" --region="$REGION" \
                 --project="$PROJECT_ID" --quiet || log "  WARN: delete may have timed out"
             log "  Deleted"
+            wait_deleted "gcloud_timeout 15 gcloud workstations configs describe $CONFIG --cluster=$CLUSTER --region=$REGION --project=$PROJECT_ID" "config" 120
         else
             log "  Not found — skipping"
         fi
@@ -405,6 +423,7 @@ elif [ "$COMMAND" = "teardown" ]; then
             gcloud_timeout 900 gcloud workstations clusters delete "$CLUSTER" \
                 --region="$REGION" --project="$PROJECT_ID" --quiet || log "  WARN: delete may have timed out"
             log "  Deleted"
+            wait_deleted "gcloud_timeout 15 gcloud workstations clusters describe $CLUSTER --region=$REGION --project=$PROJECT_ID" "cluster" 900
         else
             log "  Not found — skipping"
         fi
@@ -420,6 +439,7 @@ elif [ "$COMMAND" = "teardown" ]; then
             gcloud_timeout 120 gcloud artifacts repositories delete "$AR_REPO" \
                 --location="$REGION" --project="$PROJECT_ID" --quiet || log "  WARN: delete may have timed out"
             log "  Deleted"
+            wait_deleted "gcloud_timeout 15 gcloud artifacts repositories describe $AR_REPO --location=$REGION --project=$PROJECT_ID" "Artifact Registry" 120
         else
             log "  Not found — skipping"
         fi
