@@ -510,6 +510,7 @@ elif [ "$COMMAND" = "teardown" ]; then
             gcloud_timeout 120 gcloud functions delete ws-email-notify \
                 --gen2 --region="$REGION" --project="$PROJECT_ID" --quiet || log "  WARN: delete may have timed out"
             log "  Deleted"
+            wait_deleted "gcloud_timeout 15 gcloud functions describe ws-email-notify --gen2 --region=$REGION --project=$PROJECT_ID" "Cloud Function" 120
         else
             log "  Not found — skipping"
         fi
