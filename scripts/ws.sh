@@ -18,7 +18,9 @@ set -euo pipefail
 REGION="us-west1"
 # Auto-detect repo URL from git remote (falls back to placeholder if not in a git repo)
 SCRIPT_DIR_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_URL=$(git -C "$SCRIPT_DIR_ROOT" remote get-url origin 2>/dev/null || echo "https://github.com/your-github-username/cloud-workstations.git")
+# Try to get the git URL. If it fails, leave it empty.
+REPO_URL=""
+AUTO_REPO=$(git -C "$SCRIPT_DIR_ROOT" remote get-url origin 2>/dev/null || echo "")
 CLUSTER="workstation-cluster"
 CONFIG="ws-config"
 WORKSTATION="dev-workstation"
@@ -41,6 +43,7 @@ usage() {
     echo "  --modules MODULES           Comma-separated modules for custom profile"
     echo "  -w, --webhook URL           Google Chat / Slack webhook for notifications"
     echo "  -e, --email EMAIL           Email address for notifications"
+    echo "  -r, --repo REPO             GitHub Repository"
     echo "  -y, --yes                   Skip confirmation (teardown only)"
     exit 1
 }
@@ -74,11 +77,29 @@ while [[ $# -gt 0 ]]; do
         --modules)     CUSTOM_MODULES="$2"; PROFILE="custom"; shift 2 ;;
         -w|--webhook)  WEBHOOK_URL="$2"; shift 2 ;;
         -e|--email)    EMAIL="$2"; shift 2 ;;
+	-r|--repo)     REPO_URL="$2"; shift 2 ;;
         -y|--yes)      SKIP_CONFIRM=true; shift ;;
         -h|--help)     usage ;;
         *) echo "Unknown option: $1"; usage ;;
     esac
 done
+
+#Make Repo Fail Gracefully if recieve a blank URL and add https://
+if [ -n "$REPO_URL" ]; then
+    # If the user provided a repo via --repo, check the prefix
+    # If it DOES NOT start with http://, https://, or git@, prepend https://
+    if [[ ! "$REPO_URL" =~ ^(https?://|git@) ]]; then
+        REPO_URL="https://${REPO_URL}"
+    fi
+elif [ -n "$AUTO_REPO" ]; then
+    # Fallback to the auto-detected local git origin
+    REPO_URL="$AUTO_REPO"
+else
+    # If no flag was passed and we aren't in a git repo, fail gracefully
+    echo "ERROR: Not in a git repository. You must provide a repository URL using the --repo flag."
+    echo "Example: bash scripts/ws.sh setup -p $PROJECT_ID --repo github.com/ameer00/cloud-workstations.git"
+    exit 1
+fi
 
 # Validate profile
 case "$PROFILE" in
@@ -233,6 +254,7 @@ if [ "$COMMAND" = "setup" ]; then
                 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
                     --member="serviceAccount:${SA}" \
                     --role="$ROLE" \
+		    --condition=None \
                     --quiet --format=none 2>&1 || true
             fi
         done
