@@ -32,6 +32,12 @@ if [ "$PROFILE" = "custom" ]; then
 else
     MODULES="${PROFILE_MODULES[$PROFILE]:-${PROFILE_MODULES[full]}}"
 fi
+
+# Check if a module is enabled in the current profile (runs in Cloud Build context)
+profile_has_module() {
+    echo ",$MODULES," | grep -q ",$1,"
+}
+
 CLUSTER="workstation-cluster"
 CONFIG="ws-config"
 WORKSTATION="dev-workstation"
@@ -471,9 +477,37 @@ else
     notify_and_fail "Home Manager verification"
 fi
 
+# Build Nix package list dynamically based on profile
+log "  Building package list for profile '$PROFILE'..."
+
+# Base packages (all profiles)
+BASE_PKGS="neovim tmux tree ffmpeg git gh curl wget htop ripgrep fd jq unzip chromium google-chrome sway waybar foot wofi thunar grim slurp wl-clipboard clipman mako swaylock swayidle wayvnc nodejs_22"
+
+# IDE packages (ides module — ai + full profiles)
+IDE_PKGS=""
+if profile_has_module "ides"; then
+    IDE_PKGS="vscode jetbrains.idea-oss code-cursor windsurf zed-editor"
+    log "    + IDEs: $IDE_PKGS"
+fi
+
+ALL_PKGS="$BASE_PKGS $IDE_PKGS"
+log "    Total packages: $(echo $ALL_PKGS | wc -w)"
+
+# Format packages as Nix list (4 per line for readability)
+NIX_PKG_LIST=""
+count=0
+for pkg in $ALL_PKGS; do
+    if [ $((count % 4)) -eq 0 ] && [ $count -gt 0 ]; then
+        NIX_PKG_LIST="${NIX_PKG_LIST}
+    "
+    fi
+    NIX_PKG_LIST="${NIX_PKG_LIST}${pkg} "
+    count=$((count + 1))
+done
+
 # Create home.nix (fast — use ws_pipe)
 log "  Deploying home.nix..."
-cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/home-manager/home.nix"
+cat << NIXEOF | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/home-manager/home.nix"
 { config, pkgs, ... }:
 
 {
@@ -484,23 +518,7 @@ cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/ho
   home.stateVersion = "25.11";
 
   home.packages = with pkgs; [
-    # Dev tools
-    neovim tmux tree ffmpeg git gh curl wget htop ripgrep fd jq unzip
-
-    # Browsers
-    chromium google-chrome
-
-    # IDEs
-    vscode jetbrains.idea-oss
-
-    # AI IDEs
-    code-cursor windsurf zed-editor
-
-    # Sway ecosystem
-    sway waybar foot wofi thunar grim slurp wl-clipboard clipman mako swaylock swayidle wayvnc
-
-    # Node.js for CLI tools
-    nodejs_22
+    ${NIX_PKG_LIST}
   ];
 
   programs.zsh = {
@@ -533,54 +551,54 @@ cat << 'NIXEOF' | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/ho
     };
     initContent = ''
       # Nix profile
-      if [ -e $HOME/.nix-profile/etc/profile.d/nix.sh ]; then . $HOME/.nix-profile/etc/profile.d/nix.sh; fi
-      if [ -e $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh ]; then . $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh; fi
+      if [ -e \$HOME/.nix-profile/etc/profile.d/nix.sh ]; then . \$HOME/.nix-profile/etc/profile.d/nix.sh; fi
+      if [ -e \$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh ]; then . \$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh; fi
 
       # Timezone
       export TZ="America/Los_Angeles"
 
       # PATH additions
-      export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:/var/lib/nvidia/bin:$PATH"
-      export LD_LIBRARY_PATH=/var/lib/nvidia/lib64:$LD_LIBRARY_PATH
+      export PATH="\$HOME/.npm-global/bin:\$HOME/.local/bin:/var/lib/nvidia/bin:\$PATH"
+      export LD_LIBRARY_PATH=/var/lib/nvidia/lib64:\$LD_LIBRARY_PATH
 
       # Go
-      export GOROOT="$HOME/go"
-      export GOPATH="$HOME/gopath"
-      export PATH="$GOROOT/bin:$GOPATH/bin:$PATH"
+      export GOROOT="\$HOME/go"
+      export GOPATH="\$HOME/gopath"
+      export PATH="\$GOROOT/bin:\$GOPATH/bin:\$PATH"
 
       # Rust
-      export PATH="$HOME/.cargo/bin:$PATH"
+      export PATH="\$HOME/.cargo/bin:\$PATH"
 
       # pyenv
-      export PYENV_ROOT="$HOME/.pyenv"
-      export PATH="$PYENV_ROOT/bin:$PATH"
+      export PYENV_ROOT="\$HOME/.pyenv"
+      export PATH="\$PYENV_ROOT/bin:\$PATH"
       if command -v pyenv &>/dev/null; then
-          eval "$(pyenv init -)"
+          eval "\$(pyenv init -)"
       fi
 
       # rbenv
-      export PATH="$HOME/.rbenv/bin:$PATH"
+      export PATH="\$HOME/.rbenv/bin:\$PATH"
       if command -v rbenv &>/dev/null; then
-          eval "$(rbenv init -)"
+          eval "\$(rbenv init -)"
       fi
 
       # Source environment
-      if [ -f $HOME/.env ]; then
+      if [ -f \$HOME/.env ]; then
           set -a
-          . $HOME/.env
+          . \$HOME/.env
           set +a
       fi
 
       # Starship prompt
       if command -v starship &>/dev/null; then
-          eval "$(starship init zsh)"
+          eval "\$(starship init zsh)"
       fi
 
       # Custom aliases
-      [ -f $HOME/.zsh/zsh_aliases.sh ] && . $HOME/.zsh/zsh_aliases.sh
+      [ -f \$HOME/.zsh/zsh_aliases.sh ] && . \$HOME/.zsh/zsh_aliases.sh
 
       # User customizations
-      [ -f $HOME/.zshrc.local ] && . $HOME/.zshrc.local
+      [ -f \$HOME/.zshrc.local ] && . \$HOME/.zshrc.local
     '';
   };
 
