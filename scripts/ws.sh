@@ -37,6 +37,8 @@ usage() {
     echo "  -p, --project PROJECT_ID    GCP project ID"
     echo ""
     echo "Optional:"
+    echo "  --profile PROFILE           Install profile: minimal, dev, ai, full (default: full)"
+    echo "  --modules MODULES           Comma-separated modules for custom profile"
     echo "  -w, --webhook URL           Google Chat / Slack webhook for notifications"
     echo "  -e, --email EMAIL           Email address for notifications"
     echo "  -y, --yes                   Skip confirmation (teardown only)"
@@ -62,17 +64,32 @@ fi
 PROJECT_ID=""
 WEBHOOK_URL=""
 EMAIL=""
+PROFILE="full"
+CUSTOM_MODULES=""
 SKIP_CONFIRM=false
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -p|--project) PROJECT_ID="$2"; shift 2 ;;
-        -w|--webhook) WEBHOOK_URL="$2"; shift 2 ;;
-        -e|--email)   EMAIL="$2"; shift 2 ;;
-        -y|--yes)     SKIP_CONFIRM=true; shift ;;
-        -h|--help)    usage ;;
+        -p|--project)  PROJECT_ID="$2"; shift 2 ;;
+        --profile)     PROFILE="$2"; shift 2 ;;
+        --modules)     CUSTOM_MODULES="$2"; PROFILE="custom"; shift 2 ;;
+        -w|--webhook)  WEBHOOK_URL="$2"; shift 2 ;;
+        -e|--email)    EMAIL="$2"; shift 2 ;;
+        -y|--yes)      SKIP_CONFIRM=true; shift ;;
+        -h|--help)     usage ;;
         *) echo "Unknown option: $1"; usage ;;
     esac
 done
+
+# Validate profile
+case "$PROFILE" in
+    minimal|dev|ai|full|custom) ;;
+    *) echo "ERROR: Invalid profile '$PROFILE'. Must be: minimal, dev, ai, full"; exit 1 ;;
+esac
+
+if [ "$PROFILE" = "custom" ] && [ -z "$CUSTOM_MODULES" ]; then
+    echo "ERROR: --modules is required when using custom profile"
+    exit 1
+fi
 
 if [ -z "$PROJECT_ID" ]; then
     echo "ERROR: --project is required"
@@ -117,6 +134,8 @@ echo "============================================="
 echo " Cloud Workstation — ${COMMAND^^}"
 echo " Project: $PROJECT_ID"
 echo " Region:  $REGION"
+echo " Profile: $PROFILE"
+[ -n "$CUSTOM_MODULES" ] && echo " Modules: $CUSTOM_MODULES"
 [ -n "$WEBHOOK_URL" ] && echo " Webhook: enabled"
 [ -n "$EMAIL" ] && echo " Email:   $EMAIL"
 echo "============================================="
@@ -248,7 +267,7 @@ steps:
       - '-c'
       - |
         cd /workspace/repo
-        bash scripts/cloud-build-setup.sh "${PROJECT_ID}" "${_REGION}" "${_WEBHOOK_URL}" "${_EMAIL_FUNC_URL}" "${_EMAIL}" "${_USER_ACCOUNT}"
+        bash scripts/cloud-build-setup.sh "${PROJECT_ID}" "${_REGION}" "${_WEBHOOK_URL}" "${_EMAIL_FUNC_URL}" "${_EMAIL}" "${_USER_ACCOUNT}" "${_PROFILE}"
     id: 'run-setup'
     waitFor: ['clone-repo']
 
@@ -260,6 +279,7 @@ substitutions:
   _EMAIL_FUNC_URL: ''
   _EMAIL: ''
   _USER_ACCOUNT: ''
+  _PROFILE: 'full'
 options:
   logging: CLOUD_LOGGING_ONLY
   machineType: 'E2_HIGHCPU_8'
@@ -268,7 +288,7 @@ BUILDEOF
     # Build the substitutions array — use gcloud's --substitutions flag carefully.
     # Webhook URLs contain & and = which are safe in Cloud Build substitution values
     # but must be properly quoted when passed via shell.
-    SUBS_ARGS=("_REPO_URL=${REPO_URL}" "_REGION=${REGION}" "_USER_ACCOUNT=${ACCOUNT}")
+    SUBS_ARGS=("_REPO_URL=${REPO_URL}" "_REGION=${REGION}" "_USER_ACCOUNT=${ACCOUNT}" "_PROFILE=${PROFILE}")
     [ -n "$WEBHOOK_URL" ] && SUBS_ARGS+=("_WEBHOOK_URL=${WEBHOOK_URL}")
     [ -n "$EMAIL_FUNCTION_URL" ] && SUBS_ARGS+=("_EMAIL_FUNC_URL=${EMAIL_FUNCTION_URL}" "_EMAIL=${EMAIL}")
 

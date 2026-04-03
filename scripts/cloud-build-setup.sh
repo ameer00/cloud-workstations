@@ -11,12 +11,27 @@
 
 set -euo pipefail
 
-PROJECT_ID="${1:?Usage: cloud-build-setup.sh PROJECT_ID REGION [WEBHOOK_URL] [EMAIL_FUNC_URL] [EMAIL] [USER_ACCOUNT]}"
+PROJECT_ID="${1:?Usage: cloud-build-setup.sh PROJECT_ID REGION [WEBHOOK_URL] [EMAIL_FUNC_URL] [EMAIL] [USER_ACCOUNT] [PROFILE]}"
 REGION="${2:-us-west1}"
 WEBHOOK_URL="${3:-}"
 EMAIL_FUNC_URL="${4:-}"
 EMAIL="${5:-}"
 USER_ACCOUNT="${6:-}"
+PROFILE="${7:-full}"
+
+# Module definitions — map profile names to comma-separated module lists
+declare -A PROFILE_MODULES
+PROFILE_MODULES[minimal]="core,desktop"
+PROFILE_MODULES[dev]="core,desktop,tmux,ai-tools-minimal"
+PROFILE_MODULES[ai]="core,desktop,tmux,ides,ai-tools"
+PROFILE_MODULES[full]="core,desktop,tmux,ides,ai-tools,languages,tailscale"
+
+# Resolve modules from profile
+if [ "$PROFILE" = "custom" ]; then
+    MODULES="${PROFILE}"  # custom modules passed directly — will be set via ws-modules file
+else
+    MODULES="${PROFILE_MODULES[$PROFILE]:-${PROFILE_MODULES[full]}}"
+fi
 CLUSTER="workstation-cluster"
 CONFIG="ws-config"
 WORKSTATION="dev-workstation"
@@ -364,6 +379,19 @@ if [ "$SSH_READY" = false ]; then
     notify_and_fail "SSH access to workstation"
 fi
 notify "Progress: Workstation Running" "Project: ${PROJECT_ID}" "Workstation is up and SSH ready. Installing Nix and packages next (10-15 min)..."
+
+# Deploy module config to workstation
+log "Deploying module config (profile=$PROFILE)..."
+ws_ssh "cat > ~/.ws-modules << 'MODEOF'
+profile=$PROFILE
+modules=$MODULES
+MODEOF"
+test_pass "Module config deployed (profile=$PROFILE, modules=$MODULES)"
+
+# Deploy ws-modules.sh helper
+cat "${REPO_DIR}/workstation-image/scripts/ws-modules.sh" | \
+    ws_pipe "mkdir -p ~/.local/bin && cat > ~/.local/bin/ws-modules.sh && chmod +x ~/.local/bin/ws-modules.sh"
+test_pass "ws-modules.sh helper deployed"
 
 # =========================================================================
 step "Step 8b/19: Grant user access to workstation (browser UI)"
