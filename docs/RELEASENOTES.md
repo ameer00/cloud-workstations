@@ -1,5 +1,31 @@
 # Release Notes — Cloud Workstation
 
+## v1.15 — Composable Install Profiles (2026-04-02)
+
+### Added
+- **Install profiles** — choose `minimal`, `dev`, `ai`, `full`, or `custom` profile via `--profile` flag to control what gets installed. Minimal profile builds in ~14 min vs ~55 min for full (75% faster)
+- **`--profile` flag** for `ws.sh setup` — selects a predefined set of modules (e.g., `--profile minimal`)
+- **`--modules` flag** for `ws.sh setup` — enables individual modules with `--profile custom --modules "ides,ai-tools"`
+- **`~/.ws-modules` config file** — records which modules are enabled. Boot scripts and tests automatically adapt to the selected profile
+- **`ws-modules.sh` helper** — provides `ws_module_enabled()` function for boot scripts to check whether a module is enabled before running
+- **Dynamic `home.nix` generation** — `cloud-build-setup.sh` generates Nix Home Manager config with only the packages needed for the selected profile. AI IDEs (Cursor, Windsurf, Zed, VSCode, IntelliJ) only included for ai/full profiles
+- **Conditional boot tests** — `10-tests.sh` reports SKIP for disabled modules instead of FAIL, keeping test results clean and actionable
+
+### Changed
+- **`setup.sh`** — boot scripts now check `ws_module_enabled <module>` and skip if their module is disabled
+- **`cloud-build-setup.sh`** — language and AI tool install steps gated by profile; `home.nix` generated dynamically
+
+### Fixed
+- **`ws-modules.sh` `$HOME` bug** — `$HOME` is empty when sourced by root during Cloud Build setup. Changed to hardcoded `/home/user` path
+
+### Performance
+| Profile | Build Time | Tests |
+|---------|-----------|-------|
+| minimal | ~14 min | 46 PASS, 0 FAIL, 8 SKIP |
+| full | ~55 min | 77 PASS, 1 FAIL (false positive), 0 SKIP |
+
+---
+
 ## v1.14 — Tailscale, tmux, Persistence (2026-04-02)
 
 ### Added

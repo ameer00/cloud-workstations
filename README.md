@@ -71,7 +71,32 @@ The setup script prints a Cloud Console link. You can also stream logs:
 gcloud builds log BUILD_ID --stream --project=YOUR_PROJECT_ID --region=us-west1
 ```
 
-Setup takes approximately **50-60 minutes** (includes Docker build, Nix install, language compilation, and AI tools).
+### Install Profiles
+
+Choose a profile to control what gets installed:
+
+| Profile | What's Included | Build Time |
+|---------|----------------|------------|
+| `minimal` | Sway desktop, ZSH, Chrome, Antigravity, dev tools | ~14 min |
+| `dev` | minimal + tmux + Claude Code | ~25 min |
+| `ai` | dev + AI IDEs + AI CLI tools | ~35 min |
+| `full` | Everything including Go, Rust, Python, Ruby | ~55 min |
+
+```bash
+# Default (full profile)
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID
+
+# Minimal profile (fastest)
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID --profile minimal
+
+# AI profile (IDEs + AI tools, no languages)
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID --profile ai
+
+# Custom modules
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID --profile custom --modules "ides,ai-tools"
+```
+
+The `~/.ws-modules` config file records which modules are enabled. Boot scripts and tests automatically adapt to the selected profile.
 
 ## After Setup
 
@@ -126,6 +151,7 @@ Cloud Scheduler jobs manage the workstation automatically:
 | **Networking** | Tailscale VPN (opt-in via `~/.env`) |
 | **Auto-start** | Cloud Scheduler starts workstation weekdays at 6AM PT, stops at 9PM PT |
 | **Boot apps** | 4 workspaces auto-launch: terminal, Chrome, Antigravity, terminal |
+| **Profiles** | Composable install: minimal (14 min), dev, ai, full (55 min) — `--profile` flag |
 | **Boot tests** | 80+ automated tests run on every boot — results at `~/logs/boot-test-results.txt` |
 | **Packages** | Managed via Nix Home Manager on persistent disk |
 

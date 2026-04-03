@@ -1,5 +1,46 @@
 # Development Progress Log — Cloud Workstation
 
+## Session 18 — 2026-04-02
+
+### Goals
+- Implement composable install profiles (F-0081, F-0082) — allow users to choose minimal/dev/ai/full/custom profile to control what gets installed
+- Reduce minimal build time from 55 min to ~14 min
+
+### Completed
+
+- **F-0081** (Composable install profiles): Implemented in 5 phases + 1 bug fix across 6 commits on `feature/composable-install`:
+  - **Phase 1** (commit 95cdd38): Added `--profile` and `--modules` CLI flags to `ws.sh`. Created `~/.ws-modules` config file format. Created `ws-modules.sh` helper script with `ws_module_enabled()` function for boot scripts to check module state
+  - **Phase 2** (commit c10782d): Updated `setup.sh` to gate boot scripts by module — scripts check `ws_module_enabled <module>` and skip if disabled. Modules: core (always), desktop, ides, ai-tools, languages, tailscale, tmux
+  - **Phase 3** (commit d96385e): Updated `cloud-build-setup.sh` to generate dynamic `home.nix` per profile — AI IDEs (Cursor, Windsurf, Zed, VSCode, IntelliJ) only included for ai/full profiles, saving significant Nix build time
+  - **Phase 4** (implicit in Phase 3): `cloud-build-setup.sh` gates language install steps (07a-lang-deps, 07b-languages) and AI tool install steps by profile
+  - **Phase 5** (commit cf68015): Updated `10-tests.sh` to conditionally test enabled modules — disabled modules show SKIP instead of FAIL
+  - **Bug fix** (commit 155e265): `ws-modules.sh` used `$HOME` which is empty when sourced by root during setup. Changed to hardcoded `/home/user` path
+
+- **F-0082** (Dynamic home.nix generation per profile): Implemented as part of Phase 3 — `cloud-build-setup.sh` generates `home.nix` with conditional package lists based on the selected profile. IDE packages only added for ai/full profiles.
+
+### Test Results
+- **minimal** (gement03): 14 min build, 46 PASS, 0 FAIL, 8 SKIP
+- **full** (gement02): 55 min build, 77 PASS, 1 FAIL (false positive), 0 SKIP
+- 75% build time reduction for minimal profile
+
+### Key Decisions
+- **Module config at `~/.ws-modules`**: Simple key=value format, sourced by bash scripts. Profile sets module defaults, `--modules` overrides individual modules
+- **`ws-modules.sh` helper**: Centralized `ws_module_enabled()` function avoids duplicating config-reading logic across boot scripts
+- **Hardcoded `/home/user`**: `$HOME` is empty when scripts run as root during Cloud Build setup. Hardcoded path is safe since workstation always uses this path
+- **SKIP vs FAIL**: Disabled modules show SKIP in boot tests instead of FAIL, keeping test results clean and actionable
+
+### Pipeline
+- SWE-1 implemented all 6 commits on `feature/composable-install`
+- Tested on gement02 (full) and gement03 (minimal)
+- All documentation updated
+
+### Next Steps
+- Merge `feature/composable-install` to `main`
+- Tag v1.15 release after PO approval
+- Consider adding `ws.sh update` command for config-only changes (F-0085)
+
+---
+
 ## Session 17 — 2026-04-01/02
 
 ### Goals

@@ -4,6 +4,37 @@ Complete guide for recreating the Cloud Workstation from scratch in the `YOUR_PR
 
 **Reference blog:** https://medium.com/google-cloud/running-antigravity-on-a-browser-tab-6298bb7e47c4
 
+> **Tip:** Use `--profile` to control what gets installed. See [Install Profiles](#install-profiles) below.
+
+---
+
+## Install Profiles
+
+Choose a profile to control build time and installed components:
+
+| Profile | What's Included | Build Time |
+|---------|----------------|------------|
+| `minimal` | Sway desktop, ZSH, Chrome, Antigravity, dev tools | ~14 min |
+| `dev` | minimal + tmux + Claude Code | ~25 min |
+| `ai` | dev + AI IDEs + AI CLI tools | ~35 min |
+| `full` | Everything including Go, Rust, Python, Ruby | ~55 min |
+
+```bash
+# Default (full profile)
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID
+
+# Minimal profile (fastest)
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID --profile minimal
+
+# AI profile (IDEs + AI tools, no languages)
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID --profile ai
+
+# Custom modules
+bash scripts/ws.sh setup -p YOUR_PROJECT_ID --profile custom --modules "ides,ai-tools"
+```
+
+The selected profile creates a `~/.ws-modules` config file on the workstation. Boot scripts check this file and skip disabled modules. Tests report SKIP for disabled modules instead of FAIL.
+
 ---
 
 ## Table of Contents

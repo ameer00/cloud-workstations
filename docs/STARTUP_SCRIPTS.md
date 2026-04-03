@@ -59,6 +59,20 @@ systemd (after Sway starts)
 | `~/.tmux.conf` | tmux config (Tokyo Night theme, deployed by 06b-tmux.sh) |
 | `~/.tailscale/tailscaled.state` | Tailscale VPN state (persisted on persistent disk, created by 06a-tailscale.sh) |
 
+## Module Gating (Composable Install)
+
+Boot scripts are gated by the composable install module system. The `~/.ws-modules` config file records which modules are enabled (set by `ws.sh setup --profile <profile>`). Each boot script sources `ws-modules.sh` and calls `ws_module_enabled <module>` to check if it should run. If its module is disabled, the script exits early with a log message and the boot test script (`10-tests.sh`) reports SKIP instead of FAIL.
+
+| Module | Scripts Gated | Profiles |
+|--------|--------------|----------|
+| `core` | 01-nix, 02-nvidia, 03-sway, 04-fonts, 05-shell, 06-prompt | All (always enabled) |
+| `desktop` | 09-wofi, 09-snippets | All except minimal |
+| `ides` | IDE packages in home.nix | ai, full |
+| `ai-tools` | 07-apps (AI tool install section) | dev, ai, full |
+| `languages` | 07a-lang-deps, 07b-languages | full |
+| `tailscale` | 06a-tailscale | full |
+| `tmux` | 06b-tmux | dev, ai, full |
+
 ## Key Design Decisions
 
 1. **All scripts are idempotent** — safe to run multiple times. No duplicate entries, no state corruption.
