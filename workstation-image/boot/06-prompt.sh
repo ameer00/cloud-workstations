@@ -3,7 +3,7 @@
 # 06-prompt.sh — Starship prompt + foot terminal config
 # =============================================================================
 # Ensures Starship is available and configures foot terminal with
-# Operator Mono font and Tokyo Night color scheme.
+# JetBrains Mono font and Tokyo Night color scheme.
 # =============================================================================
 
 USER="user"
@@ -31,11 +31,11 @@ runuser -u $USER -- mkdir -p "$FOOT_DIR"
 
 cat > "$FOOT_INI" << 'EOF'
 # foot terminal — Cloud Workstation
-# Tokyo Night theme with Operator Mono font
+# Tokyo Night theme with JetBrains Mono font
 
 [main]
 term=xterm-256color
-font=Operator Mono Book:size=18
+font=JetBrains Mono:size=14
 dpi-aware=no
 pad=8x8
 
@@ -72,5 +72,5 @@ clipboard-copy=Control+Shift+c
 clipboard-paste=Control+Shift+v
 EOF
 chown -R $USER:$USER "$FOOT_DIR"
-log "Created foot.ini with Operator Mono Book:size=18 and Tokyo Night theme"
+log "Created foot.ini with JetBrains Mono:size=14 and Tokyo Night theme"
 
