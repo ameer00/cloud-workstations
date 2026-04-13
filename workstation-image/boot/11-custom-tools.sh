@@ -7,6 +7,7 @@
 #   - GitHub CLI (official apt repo)
 #   - Java LTS via SDKMAN
 #   - Eclipse IDE for Java Developers
+#   - Claude Code (npm global, persistent in ~/.npm-global)
 #   - JetBrains Mono font (for foot terminal)
 # Also patches noVNC rfb.js and masks ws-autolaunch.service on every boot.
 #
@@ -183,6 +184,24 @@ DESKTOP
 }
 
 # =============================================================================
+# Claude Code
+# =============================================================================
+# Installs to ~/.npm-global/bin (persistent disk).
+# npm itself is in the base image (/usr/bin/npm) so it's always available.
+install_claude_code() {
+    local bin="$HOME_DIR/.npm-global/bin/claude"
+
+    if [ -x "$bin" ]; then
+        log "[claude] $(\"$bin\" --version 2>/dev/null | head -1) already installed — skipping"
+        return
+    fi
+
+    log "[claude] Installing Claude Code..."
+    runuser -u $USER -- npm install -g @anthropic-ai/claude-code --prefix "$HOME_DIR/.npm-global" >> "$LOG_FILE" 2>&1
+    log "[claude] Installed: $(\"$bin\" --version 2>/dev/null | head -1)"
+}
+
+# =============================================================================
 # JetBrains Mono font
 # =============================================================================
 install_jetbrains_mono() {
@@ -243,6 +262,7 @@ install_terraform
 install_gh
 install_java
 install_eclipse
+install_claude_code
 install_jetbrains_mono
 patch_novnc
 mask_autolaunch
