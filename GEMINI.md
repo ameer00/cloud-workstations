@@ -49,6 +49,7 @@ When the workstation container starts, it executes `/google/scripts/entrypoint.s
 
 ## Development Conventions
 
+-   **Branching & PRs:** For new work, always use a feature branch and submit changes via a Pull Request (PR) to the repository. Avoid committing directly to the `main` branch.
 -   **Idempotency:** All scripts (both infrastructure and boot scripts) are designed to be idempotent. They check for existing resources or states before attempting to create or modify them.
 -   **Persistence:** The root filesystem is ephemeral. All persistent data and configurations must reside in `/home/user`. Nix is specifically used to keep installed packages persistent by storing the store on the home disk.
 -   **Logging:** Bootstrap logs are tagged with `ws-bootstrap` and specific script tags. Test results are stored in `~/logs/`.
