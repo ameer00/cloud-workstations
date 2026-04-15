@@ -126,12 +126,9 @@ gcloud workstations describe dev-workstation \
 
 Open `https://<host>` in your browser. The noVNC desktop loads automatically with 4 pre-launched workspaces.
 
-### Weekday auto-start/stop
+### Auto-stop
 
-Cloud Scheduler jobs manage the workstation automatically:
-- **Start**: Weekdays (Mon-Fri) at **6:00 AM Pacific**
-- **Stop**: Weekdays (Mon-Fri) at **9:00 PM Pacific**
-- Workstations stay off on weekends to save costs.
+A Cloud Scheduler job stops the workstation daily at **8:00 PM Central** to save costs. Start it manually when you need it.
 
 ## What's Included
 
@@ -148,7 +145,7 @@ Cloud Scheduler jobs manage the workstation automatically:
 | **Languages** | Go (latest), Rust (via rustup), Python 3.12 (via pyenv), Ruby 3.3 (via rbenv), Node.js 22 (via Nix) |
 | **Apps** | Antigravity, tmux, ripgrep, fd, jq, ffmpeg, wofi, thunar, clipman |
 | **Networking** | Tailscale VPN (opt-in via `~/.env`) |
-| **Auto-start** | Cloud Scheduler starts workstation weekdays at 6AM PT, stops at 9PM PT |
+| **Auto-stop** | Cloud Scheduler stops workstation daily at 8PM Central |
 | **Boot apps** | 4 workspaces auto-launch: terminal, Chrome, Antigravity, terminal |
 | **Profiles** | Composable install: minimal (14 min), dev, ai, full (55 min) — `--profile` flag |
 | **Boot tests** | 80+ automated tests run on every boot — results at `~/logs/boot-test-results.txt` |
