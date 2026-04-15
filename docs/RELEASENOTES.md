@@ -1,5 +1,63 @@
 # Release Notes — Cloud Workstation
 
+## v1.17 — GCP Organization Alignment, Font Cleanup, Fork Retrospective (2026-04-15)
+
+This release captures the final alignment of the fork with the deployed
+GCP Organization environment and cleans up the terminal font stack. It
+also adds a retrospective **Fork Divergence Summary** covering fork-only
+work that pre-dated the v1.14–v1.16 release notes and had never been
+formally documented.
+
+### Added
+- **GCP Organization deployment alignment** (F-0091) — `scripts/cloud-build-setup.sh` rewritten to target the live deployed configuration: region `us-central1`, cluster `main-cluster`, config `sway-config`, workstation `sway-workstation`, image `dev-workstation:latest`, dedicated `sway-workstation-sa` service account, custom `workstations-vpc` (10.0.0.0/24), 2h idle timeout, daily 8PM Central stop scheduler
+- **Nix-managed open-source fonts** — `cascadia-code`, `fira-code`, and `jetbrains-mono` added to `home.packages` so they are present on fresh setups without a tarball upload
+
+### Changed
+- **Machine spec** (F-0090) — documented target is now `n2-standard-8` with 200GB `pd-balanced` and **no GPU**. T4 GPU quota removed as a prerequisite. `02-nvidia.sh` is a documented no-op on this profile. README, SETUP.md, and STARTUP_SCRIPTS.md updated accordingly
+- **Font deployment via Cloud Build** — only Operator Mono (~264K) is piped through `gcloud workstations ssh` (previously the full 61MB dev-fonts tarball hit the 300s timeout and silently failed). `--ssh-flag="-T"` added to prevent TTY corruption of binary stdin. Setup verify now does a real OTF count check instead of unconditional `test_pass`, and splits `fonts_operator` / `fonts_cascadia` so each deployment path is checked independently
+- **Foot terminal font** — switched to `DejaVu Sans Mono` (confirmed present on the system) as the single source of truth managed only by `06-prompt.sh`. Home Manager no longer manages `foot.ini`, eliminating the double-write that resolved `font=monospace` to the proportional Noto Sans Regular and produced the "non-monospaced font" warning on every terminal open
+- **Boot test** — `10-tests.sh` updated to assert the correct configured font
+
+### Fixed
+- **Silent font deployment failure** — root cause (tarball too large for SSH timeout) is fixed rather than hidden; the `font-monospace-warn=no` suppression is removed since the real warning is gone
+
+---
+
+## Fork Divergence Summary (retrospective, pre-v1.14)
+
+The following fork-only work shipped in the markjkelly fork before the v1.14
+release notes began tracking it. Documented here so the release history is
+complete.
+
+### Cloud Build Pipeline (F-0088)
+- `cloudbuild/ws-image.yaml` — builds and pushes the workstation Docker image to Artifact Registry via Cloud Build, replacing manual `docker build/push` cycles
+- `_AR_PROJECT` substitution so the Artifact Registry project can differ from the build project
+- Integrated into the `ws.sh setup` flow so a `git push` + `ws.sh setup` cycle produces a fresh image
+
+### Custom Tools Module (F-0089)
+- New boot script `workstation-image/boot/11-custom-tools.sh` installs tools that are either unavailable in Nix or must live on the persistent disk to survive image rebuilds:
+  - **Terraform** — pinned version, installed to `~/.local/bin`
+  - **GitHub CLI (`gh`)** — pinned version, installed to `~/.local/bin`
+  - **Java** — installed via SDKMAN into `$HOME`
+  - **Eclipse IDE** — installed to the persistent disk
+  - **Claude Code** — installed to `~/.npm-global` on boot
+- Auto-launch of workspace apps disabled by default in this module so the user chooses what to start
+
+### VNC Keyboard Compatibility (F-0090)
+- `wayvnc --keyboard=us` so key codes are encoded correctly for the browser client
+- `term=xterm-256color` added to `foot.ini` for VNC keyboard compatibility
+- Boot-time patch of `noVNC`'s `rfb.js` to disable QEMU extended key events (fixes broken special keys in the browser)
+
+### Fonts & Terminal
+- JetBrains Mono installed via apt as a persistent boot-time step (later superseded by Nix packages in v1.17)
+- Foot terminal non-monospace font warning suppressed (later root-caused and removed in v1.17)
+
+### Docs & Templating
+- `GEMINI.md` added with project context and branching/PR conventions for Gemini-driven workflows
+- `REPO_URL` placeholder updated to point at the markjkelly fork
+
+---
+
 ## v1.16 — Terminal UX (2026-04-15)
 
 ### Fixed

@@ -1,5 +1,51 @@
 # Development Progress Log — Cloud Workstation
 
+## Session 20 — 2026-04-15
+
+### Goals
+- Audit fork divergence against `upstream/main` and bring docs in line with the fork state
+- Cut v1.17 release notes covering GCP Organization alignment, font cleanup, and a retrospective for pre-v1.14 fork-only work
+- Add specs and backlog entries for all fork-only features that had never been formally tracked
+
+### Completed
+- **PM** produced `docs/RELEASENOTES.md` v1.17 entry (including a "Fork Divergence Summary" retrospective) and four new specs:
+  - `docs/specs/F-0088-cloud-build-pipeline.md`
+  - `docs/specs/F-0089-custom-tools-module.md`
+  - `docs/specs/F-0090-vnc-keyboard-compat.md`
+  - `docs/specs/F-0091-gcp-org-alignment.md`
+- **TPM** updated `docs/BACKLOG.md` — added Milestone 17 with F-0088/F-0089/F-0090/F-0091 marked Done and linked to their specs, plus F-0092 for the foot-font cleanup
+- **TPM** updated `README.md` "After Setup" commands to reflect the deployed configuration (`us-central1`, `main-cluster`, `sway-config`, `sway-workstation`)
+- **TPM** added `11-custom-tools.sh` to `docs/STARTUP_SCRIPTS.md` boot sequence table and execution flow
+- Verified `docs/SETUP.md` top-of-file machine-spec note and `docs/PIPELINE.md` MermaidJS diagram are still accurate — no changes needed
+- Verified README machine-spec table (`n2-standard-8`, 200GB `pd-balanced`, no GPU) matches commit `fe29dfe`
+
+### Audit Scope — `git log upstream/main..HEAD`
+Fork-only commits mapped to specs/backlog items:
+- `82373e1`, `aa1fc95` → F-0088 (Cloud Build pipeline)
+- `11fe006`, `85f6c56`, `bea5b61`, `33a038b`, `0ebd8f3`, `f0c4e54` → F-0089 (custom tools + noVNC patch)
+- `493d541`, `eb2d56c` → F-0090 (VNC keyboard compat)
+- `df99d3d`, `fe29dfe` → F-0091 (GCP Organization alignment + machine spec docs)
+- `6fef7ff`, `f871cd1`, `5c714dd`, `0aca479`, `1639c59` → F-0092 (foot font cleanup)
+- `a1672ff` → REPO_URL placeholder (captured in RELEASENOTES retrospective)
+- `9d419f2`, `660e0ca` → GEMINI.md (captured in RELEASENOTES retrospective)
+- `e7236a8` → F-0087 (already tracked in Session 19)
+
+### Key Decisions
+- **Retrospective in RELEASENOTES over back-dated versions**: rather than invent v1.14.1/v1.14.2/... for every pre-v1.14 fork commit, the release notes carry a single "Fork Divergence Summary" section so history is complete without fiction
+- **F-0092 added by TPM, no separate spec**: the font cleanup is a small subset of v1.17 that is adequately described by the release-notes "Changed/Fixed" bullets; a standalone spec would be make-work
+- **PIPELINE.md not touched**: agent workflow is unchanged, so the MermaidJS diagram remains accurate
+
+### Pipeline
+- Full PM → TPM pipeline used (PM drafted specs + RELEASENOTES; TPM updated BACKLOG/PROGRESS/README/STARTUP_SCRIPTS)
+- No SWE work this session — docs-only catch-up
+
+### Next Steps
+- PO review of v1.17 release notes and four new specs
+- After PO approval: `git tag -a v1.17 -m "..."` and push tags
+- Future: decide whether F-0089 custom-tools module should be folded into a dedicated `--profile extras` or remain opt-in via module flag
+
+---
+
 ## Session 19 — 2026-04-15
 
 ### Goals

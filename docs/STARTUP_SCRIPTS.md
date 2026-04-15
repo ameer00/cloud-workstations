@@ -19,6 +19,8 @@ Summary of all boot scripts that run on every workstation start. Scripts execute
 | 9 | `07b-languages.sh` | Install/update Go (tarball), Rust (rustup), Python (pyenv), Ruby (rbenv) | Yes — existence checks | First: ~15min, subsequent: ~30s |
 | 10 | `09-wofi.sh` | Deploy wofi config + Tokyo Night style.css to `~/.config/wofi/` | Yes — copy overwrite | ~1s |
 | 11 | `09-snippets.sh` | Deploy snippet-picker script + default snippets.conf (no-clobber) | Yes — cp -n for user config | ~1s |
+| 12 | `11-custom-tools.sh` | Fork-only (F-0089): installs Terraform + gh CLI to `~/.local/bin` (pinned), Java LTS via SDKMAN, Eclipse, Claude Code to `~/.npm-global`, JetBrains Mono font. Also patches noVNC `rfb.js` (QEMU key events) and masks `ws-autolaunch.service` | Yes — version/existence guarded | First: ~5min, subsequent: ~10s |
+
 **Note:** `08-workspaces.sh` and `10-tests.sh` are NOT run by setup.sh — they run via systemd services after Sway starts. See below.
 
 ## Execution Flow
@@ -39,7 +41,8 @@ Docker entrypoint
               ├── 07a-lang-deps.sh
               ├── 07b-languages.sh
               ├── 09-wofi.sh
-              └── 09-snippets.sh
+              ├── 09-snippets.sh
+              └── 11-custom-tools.sh
 
 systemd (after Sway starts)
   ├── ws-autolaunch.service
@@ -58,6 +61,7 @@ systemd (after Sway starts)
 | `~/logs/boot-test-summary.txt` | One-line summary: `PASS: X | FAIL: Y | WARN: Z` |
 | `~/.tmux.conf` | tmux config (Tokyo Night theme, deployed by 06b-tmux.sh) |
 | `~/.tailscale/tailscaled.state` | Tailscale VPN state (persisted on persistent disk, created by 06a-tailscale.sh) |
+| `~/logs/custom-tools.log` | 11-custom-tools.sh output (Terraform/gh/Java/Eclipse/Claude Code install + noVNC patch) |
 
 ## Module Gating (Composable Install)
 
