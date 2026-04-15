@@ -606,16 +606,6 @@ cat << NIXEOF | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/home
   home.file.".config/sway/config".source = /home/user/.config/home-manager/sway-config;
   home.file.".config/waybar/config".source = /home/user/.config/home-manager/waybar-config.json;
   home.file.".config/waybar/style.css".source = /home/user/.config/home-manager/waybar-style.css;
-  home.file.".config/foot/foot.ini".text = ''
-    [main]
-    font=monospace:size=11
-    [colors-dark]
-    background=1a1b26
-    foreground=c0caf5
-    [tweak]
-    font-monospace-warn=no
-  '';
-
   home.sessionVariables = {
     EDITOR = "nvim";
     VISUAL = "nvim";
