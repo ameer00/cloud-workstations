@@ -1,6 +1,6 @@
 # Cloud Workstation
 
-GPU-powered Cloud Workstation in GCP with Sway desktop, Nix package manager, and a full dev environment — accessible from any browser via noVNC.
+Cloud Workstation in GCP with Sway desktop, Nix package manager, and a full dev environment — accessible from any browser via noVNC.
 
 ## Quick Start
 
@@ -12,8 +12,7 @@ GPU-powered Cloud Workstation in GCP with Sway desktop, Nix package manager, and
 ### Prerequisites
 
 1. A GCP project where you have **Owner** role
-2. **NVIDIA T4 GPU quota** in `us-west1` (at least 1) — [check/request quota here](https://console.cloud.google.com/iam-admin/quotas?metric=NVIDIA_T4_GPUS)
-3. **Cloud Shell** (recommended) or any terminal with `gcloud` CLI
+2. **Cloud Shell** (recommended) or any terminal with `gcloud` CLI
 
 ### Step 1: Authenticate
 
@@ -138,11 +137,11 @@ Cloud Scheduler jobs manage the workstation automatically:
 
 | Component | Details |
 |-----------|---------|
-| **Machine** | n1-standard-16 (60GB RAM) + NVIDIA Tesla T4 GPU (16GB VRAM) |
-| **Storage** | 500GB persistent SSD (all data survives reboots) |
+| **Machine** | n2-standard-8 (32GB RAM) |
+| **Storage** | 200GB persistent disk (all data survives reboots) |
 | **Desktop** | Sway (Wayland) with Tokyo Night theme, accessed via noVNC in browser |
-| **Terminal** | foot terminal, ZSH + Starship prompt, Operator Mono Book font (size 18), tmux with Tokyo Night theme |
-| **Fonts** | Operator Mono, CascadiaCode, CaskaydiaCove Nerd Font, FiraCodeiScript |
+| **Terminal** | foot terminal, ZSH + Starship prompt, DejaVu Sans Mono font (size 14), tmux with Tokyo Night theme |
+| **Fonts** | DejaVu Sans Mono (system), Operator Mono (proprietary OTF), Cascadia Code, Fira Code, JetBrains Mono (via Nix) |
 | **Browsers** | Google Chrome, Chromium |
 | **IDEs** | VS Code, Cursor, Windsurf, Zed, IntelliJ IDEA, Neovim (custom config) |
 | **AI Tools** | Claude Code, Gemini CLI, Codex CLI, OpenCode, Aider, Cody CLI, pi-coding-agent, GitHub Copilot CLI |
@@ -235,7 +234,7 @@ Every boot runs 80+ automated tests to verify the workstation is healthy. Result
 - `~/logs/boot-test-results.txt` — full PASS/FAIL/WARN details
 - `~/logs/boot-test-summary.txt` — one-line summary (e.g., `PASS: 77 | FAIL: 0 | WARN: 3`)
 
-Tests cover: Nix, GPU, Sway, fonts, shell, AI tools, IDEs, languages, keybindings, clipboard, snippets, and more.
+Tests cover: Nix, Sway, fonts, shell, AI tools, IDEs, languages, keybindings, clipboard, snippets, and more.
 
 ## Re-running Setup
 
@@ -268,7 +267,7 @@ After teardown, you can re-run `setup.sh` to recreate everything.
 
 | Issue | Fix |
 |-------|-----|
-| "No GPU quota" | [Request NVIDIA_T4_GPUS quota](https://console.cloud.google.com/iam-admin/quotas) in us-west1 (at least 1) |
+| Workstation won't start | Check Cloud Workstation quotas in your region in [Cloud Console](https://console.cloud.google.com/iam-admin/quotas) |
 | Build fails mid-way | Re-run `ws.sh setup` — it picks up where it left off (idempotent) |
 | Can't connect via noVNC | Ensure workstation is started, wait 30s for Sway + wayvnc to boot |
 | Apps not on workspaces | Wait 15-20s after boot for auto-launch to complete |
