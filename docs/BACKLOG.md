@@ -1,7 +1,7 @@
 # Project Backlog — Cloud Workstation
 
 **Maintained by:** TPM
-**Last updated:** 2026-04-02 (Milestone 15 completed — composable install profiles)
+**Last updated:** 2026-04-15 (Milestone 17 — fork docs catch-up: F-0088, F-0089, F-0090, F-0091)
 
 ---
 
@@ -209,6 +209,20 @@
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
 |----|---------|------|----------|--------|-------|--------|--------------|----------|
 | F-0087 | Foot terminal starts in $HOME | — | P2 | done | PO | main | — | Sway bindings ($mod+Return, $mod+t) wrapped with `cd ~ &&` so foot inherits HOME instead of sway's cwd. Test added to 10-tests.sh. |
+
+---
+
+## Milestone 17: Fork Divergence Catch-up (v1.17)
+
+Tracks fork-only work that pre-dated or accompanied v1.17. All items are documented retrospectively so the backlog matches `git log upstream/main..HEAD`.
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0088 | Cloud Build pipeline for workstation image | [F-0088](specs/F-0088-cloud-build-pipeline.md) | P1 | done | PE | main | F-0034 | `cloudbuild/ws-image.yaml` builds + pushes to AR. `_AR_PROJECT` substitution allows differing AR/build projects. Invoked by `ws.sh setup`. Commits 82373e1, aa1fc95 |
+| F-0089 | Custom tools module (Terraform, gh, Java, Eclipse, Claude Code) | [F-0089](specs/F-0089-custom-tools-module.md) | P1 | done | SWE-1 | main | F-0033, F-0081 | `workstation-image/boot/11-custom-tools.sh` installs Terraform 1.14.8 + gh 2.89.0 to `~/.local/bin`, Java 21 via SDKMAN, Eclipse, Claude Code to `~/.npm-global`, JetBrains Mono font. Also patches noVNC rfb.js and masks ws-autolaunch. Idempotent. Commits 11fe006, 85f6c56, bea5b61, 33a038b, 0ebd8f3 |
+| F-0090 | VNC keyboard compatibility (wayvnc + noVNC + foot) | [F-0090](specs/F-0090-vnc-keyboard-compat.md) | P1 | done | SWE-1 | main | F-0001 | `wayvnc --keyboard=us`, `foot.ini term=xterm-256color`, boot-time patch of noVNC `rfb.js` to disable QEMU extended key events. Commits 493d541, eb2d56c, f0c4e54 |
+| F-0091 | Align setup script with deployed GCP Organization configuration | [F-0091](specs/F-0091-gcp-org-alignment.md) | P0 | done | PE | main | F-0034, F-0088 | `cloud-build-setup.sh` rewritten for the deployed configuration: us-central1, main-cluster, sway-config, sway-workstation, dev-workstation:latest, n2-standard-8, 200GB pd-balanced, no GPU, 2h idle, workstations-vpc, sway-workstation-sa, 8PM Central stop. README/SETUP/STARTUP_SCRIPTS updated to match (machine spec + 02-nvidia no-op note). Commits df99d3d, fe29dfe |
+| F-0092 | Foot terminal font cleanup (DejaVu Sans Mono single source) | — | P2 | done | SWE-1 | main | — | Switched foot font to DejaVu Sans Mono (system-present), removed Home Manager `programs.foot` double-write that was resolving `font=monospace` to Noto Sans Regular and warning on every launch. Added Nix `cascadia-code`/`fira-code`/`jetbrains-mono` packages so fresh setups get open-source fonts without the Operator Mono tarball path. `cloud-build-setup.sh` only uploads Operator Mono (~264K) via `gcloud ssh -T` to stay under the 300s timeout, with a real OTF count verify. Commits 6fef7ff, f871cd1, 5c714dd, 0aca479, 1639c59 |
 
 ---
 
