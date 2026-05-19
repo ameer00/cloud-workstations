@@ -240,6 +240,7 @@ check_grep "Clipman wofi PATH" "PATH=.*clipman.*wofi\|clipman store" "$SWAY_CFG"
 check_grep "Windsurf keybinding" "mod+w.*windsurf" "$SWAY_CFG"
 check_grep "Apps button click" "button1.*wofi" "$SWAY_CFG"
 check_grep "Antigravity keybinding" "antigravity" "$SWAY_CFG"
+check_binary "Antigravity CLI" "agy"
 check_grep "Snippet picker keybinding" "snippet-picker" "$SWAY_CFG"
 
 # =============================================================================

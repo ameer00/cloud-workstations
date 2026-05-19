@@ -839,8 +839,8 @@ if echo "$AI_MODULE_CHECK" | grep -q "full"; then
         test_warn "NPM AI tools install had errors (some tools may be missing)"
     fi
 
-    # Antigravity is pre-installed via apt in the Docker image (/usr/bin/antigravity).
-    # No manual download needed.
+    # Antigravity 2.0 is pre-installed in the Docker image (tar.gz to /opt/Antigravity, symlinked to /usr/bin/antigravity).
+    # agy CLI is pre-installed at /usr/local/bin/agy.
 
     # Install OpenCode via go install
     if ws_ssh "${NIX_SOURCE}"' && export GOROOT=$HOME/go GOPATH=$HOME/gopath && export PATH=$GOROOT/bin:$GOPATH/bin:$PATH && go install github.com/opencode-ai/opencode@latest'; then
@@ -870,11 +870,13 @@ if echo "$AI_MODULE_CHECK" | grep -q "full"; then
     AI_VERIFY=$(ws_ssh '
     echo "claude=$(~/.npm-global/bin/claude --version 2>/dev/null | head -1)"
     echo "gemini=$(~/.npm-global/bin/gemini --version 2>/dev/null | head -1)"
-    echo "antigravity=$(which antigravity 2>/dev/null && antigravity --version 2>/dev/null | head -1 || echo missing)"
+    echo "antigravity=$(which antigravity 2>/dev/null && echo found || echo missing)"
+    echo "agy=$(which agy 2>/dev/null && agy --version 2>/dev/null | head -1 || echo missing)"
     ')
     echo "$AI_VERIFY" | grep -q "claude=.*Claude" && test_pass "Claude Code" || test_warn "Claude Code not verified"
     echo "$AI_VERIFY" | grep -q "gemini=[0-9]" && test_pass "Gemini CLI" || test_warn "Gemini CLI not verified"
-    echo "$AI_VERIFY" | grep -q "/usr/bin/antigravity" && test_pass "Antigravity" || test_warn "Antigravity not verified"
+    echo "$AI_VERIFY" | grep -q "antigravity=found" && test_pass "Antigravity" || test_warn "Antigravity not verified"
+    echo "$AI_VERIFY" | grep -q "agy=[0-9]" && test_pass "Antigravity CLI (agy)" || test_warn "Antigravity CLI not verified"
 
 elif echo "$AI_MODULE_CHECK" | grep -q "minimal"; then
     # Minimal AI tools (dev profile): Claude Code only

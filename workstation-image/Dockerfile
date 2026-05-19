@@ -56,12 +56,16 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/* && \
   chmod -x /usr/lib/ubuntu-release-upgrader/check-new-release-gtk
 
-# Install Antigravity
-RUN mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | gpg --dearmor -o /etc/apt/keyrings/antigravity-repo-key.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" | tee /etc/apt/sources.list.d/antigravity.list > /dev/null && \
-    apt-get update && \
-    apt-get install -y antigravity
+# Install Antigravity 2.0 desktop app
+COPY Antigravity.tar.gz /tmp/Antigravity.tar.gz
+RUN mkdir -p /opt/Antigravity && \
+    tar xzf /tmp/Antigravity.tar.gz -C /opt/Antigravity --strip-components=1 && \
+    ln -sf /opt/Antigravity/antigravity /usr/bin/antigravity && \
+    rm /tmp/Antigravity.tar.gz
+
+# Install Antigravity CLI (agy)
+RUN curl -fsSL https://antigravity.google/cli/install.sh | HOME=/tmp bash && \
+    mv /tmp/.local/bin/agy /usr/local/bin/agy
 
 # Install Google Chrome
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome-keyring.gpg && \

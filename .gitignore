@@ -6,3 +6,6 @@
 # Build artifacts
 cloud-workstations
 .opencode/
+
+# Large binaries
+workstation-image/Antigravity.tar.gz
