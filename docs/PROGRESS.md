@@ -19,7 +19,8 @@
   - Added per-step exit-code checking — logs `FAIL: <step> exited with code N` on non-zero exit
   - Added before/after version capture for Chrome (`google-chrome-stable --version`) and Signal (`signal-desktop --version`)
   - Added `FAILURES` counter with summary at end of script
-  - Commit: b91b27d
+  - Fixed Signal version detection: `readlink`-based `get_signal_version()` broke on Nix user-environment aggregate paths — switched to nix-store closure query (verified on gement01, returns 8.4.1)
+  - Commits: b91b27d (hardening), task #8 (Signal version fix)
 
 - **F-0095** (Add 5 boot tests to 10-tests.sh):
   - Bootstrap ordering: verify `011_bootstrap.sh` exists, `000_bootstrap.sh` does NOT exist
@@ -52,9 +53,8 @@
 
 ### Findings / Open Items
 1. **Boot scripts on persistent disk**: Image rebuild does NOT update `~/boot/*.sh` — PE deployed via SSH tarball on gement02/gement03. Same deployment needed on gement01 when PO triggers next restart
-2. **Signal "not found" on gement02/gement03**: Pre-existing config drift — `home.nix` on those machines lacks chat apps (signal-desktop, telegram-desktop, slack) that gement01 has; `cloud-build-setup.sh` BASE_PKGS also lacks them. Proposed follow-up: repo-managed `home.nix` as single source of truth + add chat apps to BASE_PKGS (PM to add to backlog as future item)
-3. **Obsolete /nix copy step**: The `rm -rf /home/user/nix && cp -a /nix /home/user/nix` step from PE's original gement01 handoff is destructive on provisioned machines where `/nix` is already a bind mount of `/home/user/nix`. Removed from handoff instructions; copy applies only to initial fresh-project setup
-4. **gement03 profile change**: Switched from minimal → full profile during verification — PO to decide whether to keep or revert
+2. **home.nix / BASE_PKGS config drift**: `home.nix` on gement02/gement03 lacks chat apps (signal-desktop, telegram-desktop, slack) that gement01 has; `cloud-build-setup.sh` BASE_PKGS also lacks them. Proposed follow-up: repo-managed `home.nix` as single source of truth + add chat apps to BASE_PKGS (PM to add to backlog as future item)
+3. **gement03 profile change**: Switched from minimal → full profile during verification — PO to decide whether to keep or revert
 
 ### Pipeline
 - PM created spec F-0083 and backlog items (task #1)
