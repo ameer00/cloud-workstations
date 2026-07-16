@@ -1,7 +1,7 @@
 # Project Backlog — Cloud Workstation
 
 **Maintained by:** TPM
-**Last updated:** 2026-04-02 (Milestone 15 completed — composable install profiles)
+**Last updated:** 2026-07-16 (Milestone 17 created — Boot ordering & app update fix)
 
 ---
 
@@ -204,14 +204,26 @@
 
 ---
 
+## Milestone 17: Boot Ordering & App Update Fix
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0093 | Rename 000_bootstrap.sh → 011_bootstrap.sh + remove apt Chrome from Dockerfile | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | backlog | SWE-1 | feature/boot-update-fix | — | Rename image asset so bootstrap runs after 010_add-user.sh. Remove apt Chrome install + dpkg-divert wrapper from Dockerfile. Spec R1 + R2. |
+| F-0094 | Harden 07-apps.sh with exit-code checking and version logging | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | backlog | SWE-1 | feature/boot-update-fix | F-0093 | Add user existence guard, per-step exit-code checking, before/after Chrome+Signal version logging. Spec R3. |
+| F-0095 | Add boot tests for bootstrap ordering, Chrome source, and app update success | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | backlog | SWE-Test | feature/boot-update-fix | F-0093, F-0094 | Add 5 new tests to 10-tests.sh: 011_bootstrap exists, no apt Chrome, Nix Chrome primary, no runuser errors, home-manager success. Spec R4. |
+| F-0096 | Update STARTUP_SCRIPTS.md for 011_bootstrap.sh | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P1 | backlog | SWE-1 | feature/boot-update-fix | F-0093 | Update execution flow diagram and bootstrap script reference. Spec R5. |
+| F-0097 | Image rebuild + stop/start E2E verification on gement02 and gement03 | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | backlog | PE, SWE-QA | feature/boot-update-fix | F-0093, F-0094, F-0095, F-0096 | Rebuild Docker image via Cloud Build, full stop/start on gement02+gement03 (NOT gement01). Verify zero runuser errors, home-manager switch success, Chrome > 146.0.7680.164, Signal > 8.4.1, Nix Chrome in PATH, all new tests pass. |
+
+---
+
 ## Future Items
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
 |----|---------|------|----------|--------|-------|--------|--------------|----------|
-| F-0083 | Build speed: skip AR deletion on teardown | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Keep Docker image in AR across teardown/setup cycles. Saves ~17min. Image is ~280MB, pennies/month. |
-| F-0084 | Build speed: faster Cloud Build machine (E2_HIGHCPU_32) | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Docker builds 2-3x faster. Saves ~8min. |
-| F-0085 | Build speed: ws.sh update command (config-only, no rebuild) | [Research](research/build-speed-optimization.md) | P1 | backlog | — | — | — | Push configs + run boot scripts on existing workstation. ~2min vs 50min for config-only changes. |
-| F-0086 | Cloud Build tags for Console visibility | [Research](research/build-tags.md) | P2 | backlog | — | — | — | Add --tags to builds so outer (ws-setup) and inner (docker-image) are identifiable in Console. |
+| F-0098 | Build speed: skip AR deletion on teardown | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Keep Docker image in AR across teardown/setup cycles. Saves ~17min. Image is ~280MB, pennies/month. |
+| F-0099 | Build speed: faster Cloud Build machine (E2_HIGHCPU_32) | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Docker builds 2-3x faster. Saves ~8min. |
+| F-0100 | Build speed: ws.sh update command (config-only, no rebuild) | [Research](research/build-speed-optimization.md) | P1 | backlog | — | — | — | Push configs + run boot scripts on existing workstation. ~2min vs 50min for config-only changes. |
+| F-0101 | Cloud Build tags for Console visibility | [Research](research/build-tags.md) | P2 | backlog | — | — | — | Add --tags to builds so outer (ws-setup) and inner (docker-image) are identifiable in Console. |
 
 ---
 
