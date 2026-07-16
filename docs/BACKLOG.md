@@ -224,6 +224,7 @@
 | F-0099 | Build speed: faster Cloud Build machine (E2_HIGHCPU_32) | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Docker builds 2-3x faster. Saves ~8min. |
 | F-0100 | Build speed: ws.sh update command (config-only, no rebuild) | [Research](research/build-speed-optimization.md) | P1 | backlog | — | — | — | Push configs + run boot scripts on existing workstation. ~2min vs 50min for config-only changes. |
 | F-0101 | Cloud Build tags for Console visibility | [Research](research/build-tags.md) | P2 | backlog | — | — | — | Add --tags to builds so outer (ws-setup) and inner (docker-image) are identifiable in Console. |
+| F-0102 | home.nix config drift: single source of truth across projects | — | P1 | backlog | — | — | — | gement01 has chat apps (signal-desktop, telegram-desktop, slack) in home.nix but gement02/03 and cloud-build-setup.sh BASE_PKGS lack them. Make the repo the single source of truth for home.nix and sync all projects. Discovered during F-0097 verification (Signal "not found" on gement02/03). |
 
 ---
 
