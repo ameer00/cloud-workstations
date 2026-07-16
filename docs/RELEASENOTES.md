@@ -1,5 +1,34 @@
 # Release Notes — Cloud Workstation
 
+## v1.17 — Boot Ordering & App Update Fix (2026-07-16)
+
+### Fixed
+- **Boot-time app updates restored** — App updates via `07-apps.sh` had silently failed on **every boot since 2026-03-20** (~4 months, 164 logged failures). Root cause: `000_bootstrap.sh` ran before Google's `010_add-user.sh` created the `user` account, so every `runuser -u user` call failed with "user user does not exist". Renamed to `011_bootstrap.sh` so bootstrap runs immediately after user creation. First fixed boot took Chrome from 146.0.7680.177 to 150.0.7871.124
+- **07-apps.sh error checking** — Previously logged "complete" after each step regardless of exit code. Now checks exit codes per step, logs `FAIL: <step> exited with code N` on failure, tracks a failure counter with summary at end, and guards against missing user account with a FATAL early exit. Logs Chrome and Signal versions before and after updates (Signal via `nix-store --query --requisites` closure query — robust to aggregate user-environment paths)
+
+### Changed
+- **apt Google Chrome removed from Docker image** — The Dockerfile no longer installs `google-chrome-stable` via apt or creates the `dpkg-divert` wrapper (which added `--no-sandbox --no-zygote --disable-gpu --disable-dev-shm-usage`). Nix/Home-Manager Chrome on the persistent disk (`google-chrome` in `home.nix`, at `~/.nix-profile/bin/google-chrome-stable`) is the only Chrome. Reduces image size and eliminates confusion about which Chrome is active
+
+### Added
+- **5 boot tests** (F-0095) in `10-tests.sh`:
+  1. `011_bootstrap.sh` exists in `/etc/workstation-startup.d/` and `000_bootstrap.sh` does not
+  2. `google-chrome-stable` resolves to `~/.nix-profile/` path (not `/usr/bin/`)
+  3. Home Manager generation is fresh (within 48 hours)
+  4. No `runuser: user user does not exist` errors in current boot's `app-update.log`
+  5. No `FAIL:` markers in current boot's `app-update.log`
+- **STARTUP_SCRIPTS.md updated** — execution flow diagram now shows `010_add-user.sh` → `011_bootstrap.sh` ordering; `07-apps.sh` description updated with error checking and version logging details
+
+### Verified
+- **gement02:** Image build 10f70d08 (15 min). Full stop/start. Zero runuser errors. Chrome 146→150. `which google-chrome-stable` = `~/.nix-profile/bin/google-chrome-stable`. 81 PASS / 3 FAIL / 2 WARN. All 5 new F-0095 tests PASS
+- **gement03:** Image build 9f422459 (16 min). Full stop/start. Zero runuser errors. Chrome 146→150. `which google-chrome-stable` = `~/.nix-profile/bin/google-chrome-stable`. 67 PASS / 17 FAIL / 2 WARN (extra FAILs from profile switch minimal→full, not regressions). All 5 new F-0095 tests PASS
+- **gement01:** NOT restarted (PO's live session)
+
+### Notes
+- Signal reported as "not found" on gement02/gement03 — this is pre-existing (signal-desktop not in those projects' home.nix), not a regression from this fix. Signal will auto-update on gement01 (where it is installed) on the PO's next restart
+- Commits: fc335f9, f2a205c, 58bebf0, b91b27d, 4b2ce8e, 398d99b, e4fe88b, 1bbc394, d23d5e5, 0a98711, de2b5b3
+
+---
+
 ## v1.15 — Composable Install Profiles (2026-04-02)
 
 ### Added

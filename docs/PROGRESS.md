@@ -1,5 +1,77 @@
 # Development Progress Log — Cloud Workstation
 
+## Session 19 — 2026-07-16
+
+### Goals
+- Execute Milestone 17: Fix boot script ordering and restore app updates (F-0083 / F-0093–F-0097)
+- Root-cause fix for silent boot-time app update failures since 2026-03-20
+
+### Completed
+
+- **F-0093** (Rename 000_bootstrap.sh → 011_bootstrap.sh + remove apt Chrome from Dockerfile):
+  - Renamed `workstation-image/assets/etc/workstation-startup.d/000_bootstrap.sh` to `011_bootstrap.sh` so bootstrap runs after Google's `010_add-user.sh` creates the `user` account — fixes every `runuser` call that has failed on every boot since 2026-03-20 (164 logged failures)
+  - Updated internal log prefixes from `[000_bootstrap]` to `[011_bootstrap]` and `setup.sh` comment reference
+  - Removed apt Chrome install block (key, repo, `apt-get install -y google-chrome-stable`) and `dpkg-divert` wrapper from Dockerfile — Nix Chrome is the only Chrome
+  - Commits: f2a205c (rename), 58bebf0 (apt Chrome removal)
+
+- **F-0094** (Harden 07-apps.sh with exit-code checking and version logging):
+  - Added user existence guard at top of script (`id -u user` check with early exit on failure)
+  - Added per-step exit-code checking — logs `FAIL: <step> exited with code N` on non-zero exit
+  - Added before/after version capture for Chrome (`google-chrome-stable --version`) and Signal (`signal-desktop --version`)
+  - Added `FAILURES` counter with summary at end of script
+  - Fixed Signal version detection: `readlink`-based `get_signal_version()` broke on Nix user-environment aggregate paths — switched to nix-store closure query (verified on gement01, returns 8.4.1)
+  - Commits: b91b27d (hardening), task #8 (Signal version fix)
+
+- **F-0095** (Add 5 boot tests to 10-tests.sh):
+  - Bootstrap ordering: verify `011_bootstrap.sh` exists, `000_bootstrap.sh` does NOT exist
+  - No apt Chrome: verify `dpkg -l google-chrome-stable` shows package not installed
+  - Nix Chrome primary: verify `which google-chrome-stable` resolves under `~/.nix-profile/`
+  - App update success: verify `~/logs/app-update.log` does NOT contain "user user does not exist" in last boot
+  - Home Manager ran: verify log contains "Nix/Home Manager update complete" without preceding FAIL
+  - Commit: 398d99b
+
+- **F-0096** (Update STARTUP_SCRIPTS.md):
+  - Updated execution flow diagram and bootstrap script reference from `000_bootstrap.sh` to `011_bootstrap.sh`
+  - Updated description to note it runs after `010_add-user.sh` (user account creation)
+  - Commit: 4b2ce8e
+
+- **F-0097** (Image rebuild + stop/start E2E verification):
+  - Docker image rebuilt via `gcloud builds submit` direct from worktree (kept main branch clean)
+  - Build IDs: 10f70d08 (gement02, ~15 min), 9f422459 (gement03, ~16 min)
+  - Full stop/start cycle on gement02 and gement03 (NOT gement01 — PO's live session)
+  - Results: zero `runuser` errors, `home-manager switch` succeeded, Chrome updated 146.0.7680.177 → 150.0.7871.124
+  - Nix-only Chrome confirmed (`which google-chrome-stable` → `~/.nix-profile/bin/`)
+  - Chrome headless QA passed, all 5 new boot tests PASS on both projects
+  - Commit: e4fe88b
+
+- **Spec + backlog**: PM wrote spec `docs/specs/F-0083-boot-ordering-app-updates.md` and created 5 backlog items (F-0093–F-0097). Commit: fc335f9
+
+### Key Decisions
+- Stay on `nixpkgs-unstable` — PO accepted the few-days lag behind vendor releases
+- Build submitted from worktree source (`/home/user/Apps/ws-bootfix`) rather than merging to main pre-approval — kept main clean for PO's uncommitted work
+- Boot scripts deployed to gement02/gement03 via SSH tarball (image rebuild does NOT update `~/boot/*.sh` on persistent disk)
+
+### Findings / Open Items
+1. **Boot scripts on persistent disk**: Image rebuild does NOT update `~/boot/*.sh` — PE deployed via SSH tarball on gement02/gement03. Same deployment needed on gement01 when PO triggers next restart
+2. **home.nix / BASE_PKGS config drift**: `home.nix` on gement02/gement03 lacks chat apps (signal-desktop, telegram-desktop, slack) that gement01 has; `cloud-build-setup.sh` BASE_PKGS also lacks them. Proposed follow-up: repo-managed `home.nix` as single source of truth + add chat apps to BASE_PKGS (PM to add to backlog as future item)
+3. **gement03 profile change**: Switched from minimal → full profile during verification — PO to decide whether to keep or revert
+
+### Pipeline
+- PM created spec F-0083 and backlog items (task #1)
+- TPM assigned work items and verified spec completeness (task #2)
+- SWE-1 implemented F-0093, F-0094, F-0096 (task #3)
+- SWE-Test verified F-0095 with 5 new boot tests (task #4)
+- PE rebuilt images and ran E2E verification on gement02/gement03 (task #5)
+- All work on `feature/boot-update-fix` branch in worktree `/home/user/Apps/ws-bootfix`
+
+### Next Steps
+- PO approval → merge `feature/boot-update-fix` to `main` → tag release
+- PM updates RELEASENOTES.md with version entry (task #7)
+- gement01 application (PO-triggered): deploy boot scripts to `~/boot/`, rebuild image, full stop/start — NO `/nix` copy step
+- Future: repo-managed `home.nix` as single source of truth for all projects
+
+---
+
 ## Session 18 — 2026-04-02
 
 ### Goals

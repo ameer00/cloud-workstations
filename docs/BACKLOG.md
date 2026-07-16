@@ -1,7 +1,7 @@
 # Project Backlog — Cloud Workstation
 
 **Maintained by:** TPM
-**Last updated:** 2026-04-02 (Milestone 15 completed — composable install profiles)
+**Last updated:** 2026-07-16 (Milestone 17 created — Boot ordering & app update fix)
 
 ---
 
@@ -204,14 +204,27 @@
 
 ---
 
+## Milestone 17: Boot Ordering & App Update Fix
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0093 | Rename 000_bootstrap.sh → 011_bootstrap.sh + remove apt Chrome from Dockerfile | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | done | SWE-1 | feature/boot-update-fix | — | Renamed via git mv, updated log prefixes [000_bootstrap]→[011_bootstrap], updated setup.sh comment, removed apt Chrome + dpkg-divert from Dockerfile. Spec R1 + R2. |
+| F-0094 | Harden 07-apps.sh with exit-code checking and version logging | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | done | SWE-1 | feature/boot-update-fix | F-0093 | Added user existence guard (FATAL exit), run_step() wrapper with per-step FAIL logging, before/after Chrome+Signal version capture, failure counter summary. Spec R3. |
+| F-0095 | Add boot tests for bootstrap ordering, Chrome source, and app update success | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | done | SWE-Test | feature/boot-update-fix | F-0093, F-0094 | Implemented 5 tests in 10-tests.sh: (1) 011_bootstrap exists + 000 removed, (2) Chrome resolves to Nix profile not /usr/bin, (3) Home Manager generation freshness within 48h, (4) no runuser errors in current boot's app-update.log, (5) no FAIL lines in current boot. Log scoping uses tac+sed to isolate latest boot block. All verified via simulation + bash -n. |
+| F-0096 | Update STARTUP_SCRIPTS.md for 011_bootstrap.sh | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P1 | done | SWE-1 | feature/boot-update-fix | F-0093 | Updated intro, execution flow diagram (shows 010_add-user.sh → 011_bootstrap.sh ordering), and 07-apps.sh description (error checking, version logging). Spec R5. |
+| F-0097 | Image rebuild + stop/start E2E verification on gement02 and gement03 | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | done | PE, SWE-QA | feature/boot-update-fix | F-0093, F-0094, F-0095, F-0096 | **Verified 2026-07-16.** Build path: direct `gcloud builds submit` from worktree source (main untouched). gement02 build 10f70d08 (15min), gement03 build 9f422459 (16min). Full stop/start on both. Boot scripts manually deployed to ~/boot/ (persistent disk). Results: (a) 011_bootstrap.sh present, 000 absent on both. (b) Zero "user user does not exist" errors on both. (c) Chrome 146.0.7680.177→150.0.7871.124 on both. Signal "not found" (signal-desktop symlink exists but not on PATH — pre-existing, not a regression). (d) `which google-chrome-stable` = /home/user/.nix-profile/bin/google-chrome-stable on both. (e) gement02: 81 PASS/3 FAIL/2 WARN; gement03: 67 PASS/17 FAIL/2 WARN (extra FAILs from profile switch minimal→full, not F-0083 regressions). All 5 F-0095 tests PASS on both. (f) Chrome runs headless from /nix/store on both (exit 0). gement01 NOT touched. |
+
+---
+
 ## Future Items
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
 |----|---------|------|----------|--------|-------|--------|--------------|----------|
-| F-0083 | Build speed: skip AR deletion on teardown | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Keep Docker image in AR across teardown/setup cycles. Saves ~17min. Image is ~280MB, pennies/month. |
-| F-0084 | Build speed: faster Cloud Build machine (E2_HIGHCPU_32) | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Docker builds 2-3x faster. Saves ~8min. |
-| F-0085 | Build speed: ws.sh update command (config-only, no rebuild) | [Research](research/build-speed-optimization.md) | P1 | backlog | — | — | — | Push configs + run boot scripts on existing workstation. ~2min vs 50min for config-only changes. |
-| F-0086 | Cloud Build tags for Console visibility | [Research](research/build-tags.md) | P2 | backlog | — | — | — | Add --tags to builds so outer (ws-setup) and inner (docker-image) are identifiable in Console. |
+| F-0098 | Build speed: skip AR deletion on teardown | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Keep Docker image in AR across teardown/setup cycles. Saves ~17min. Image is ~280MB, pennies/month. |
+| F-0099 | Build speed: faster Cloud Build machine (E2_HIGHCPU_32) | [Research](research/build-speed-optimization.md) | P2 | backlog | — | — | — | Docker builds 2-3x faster. Saves ~8min. |
+| F-0100 | Build speed: ws.sh update command (config-only, no rebuild) | [Research](research/build-speed-optimization.md) | P1 | backlog | — | — | — | Push configs + run boot scripts on existing workstation. ~2min vs 50min for config-only changes. |
+| F-0101 | Cloud Build tags for Console visibility | [Research](research/build-tags.md) | P2 | backlog | — | — | — | Add --tags to builds so outer (ws-setup) and inner (docker-image) are identifiable in Console. |
+| F-0102 | home.nix config drift: single source of truth across projects | — | P1 | backlog | — | — | — | gement01 has chat apps (signal-desktop, telegram-desktop, slack) in home.nix but gement02/03 and cloud-build-setup.sh BASE_PKGS lack them. Make the repo the single source of truth for home.nix and sync all projects. Discovered during F-0097 verification (Signal "not found" on gement02/03). |
 
 ---
 
