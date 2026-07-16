@@ -1,5 +1,33 @@
 # Release Notes — Cloud Workstation
 
+## v1.18 — Chrome /dev/shm Crash Fix (2026-07-16)
+
+### Fixed
+- **Chrome/Chromium renderer crashes on real pages** — After v1.17 removed apt Chrome (which had a dpkg-divert wrapper injecting `--disable-dev-shm-usage` into every launch), the Nix-only Chrome launched bare. The container's `/dev/shm` is 64 MB, causing renderer OOM crashes on memory-heavy pages (Chrome Web Store was unusable, heavy tabs crashed constantly). The `--disable-dev-shm-usage` flag is now baked into both Nix wrappers via `commandLineArgs` override (`google-chrome.override` and `chromium.override`), covering every launch path: PATH invocation, `.desktop`/wofi app launcher, and sway `$mod+b` keybinding
+- **Nix profile corruption on gement02/gement03** — Pre-existing issue discovered during deployment: `~/.nix-profile/manifest.nix` (env-manifest.nix) was missing on both machines, likely from historical `/nix` copy damage. Repaired via `nix-env --set-flag priority 0 home-manager-path` + `home-manager switch`
+
+### Added
+- **2 boot tests** (F-0105) in `10-tests.sh`:
+  1. `google-chrome-stable` Nix wrapper contains `--disable-dev-shm-usage`
+  2. `chromium` Nix wrapper contains `--disable-dev-shm-usage`
+
+### Changed
+- **`cloud-build-setup.sh`** — `chromium` and `google-chrome` removed from `BASE_PKGS` string; override expressions `(google-chrome.override { commandLineArgs = "--disable-dev-shm-usage"; })` and `(chromium.override { commandLineArgs = "--disable-dev-shm-usage"; })` added directly to the `home.packages` heredoc template for fresh setups
+
+### Verified
+- **gement01:** `home-manager switch` successful. Wrapper grep confirms flag present. Headless `--dump-dom` of chromewebstore.google.com returns >0 bytes without explicit flag. PO testing interactive Chrome from wofi (pending final confirmation)
+- **gement02:** `home-manager switch` successful after nix profile repair. Wrapper grep confirms flag. Headless test passes
+- **gement03:** `home-manager switch` successful after nix profile repair. Wrapper grep confirms flag. Headless test passes
+
+### Notes
+- No reboot required — `home-manager switch` regenerates the Nix wrapper immediately
+- `--no-sandbox`, `--disable-gpu`, `--no-zygote` deliberately NOT added: sandbox works in the container, GPU rendering is TBD (contingency only if PO reports residual glitches), no evidence of zygote issues
+- This fix increases the urgency of F-0102 (home.nix single source of truth) — live home.nix edits on each machine are a stopgap until the repo becomes authoritative
+- Nix profile corruption on gement02/03 is a separate issue (future item F-0107); root cause suspected to be historical `/nix` copy damage
+- Commits: 28fbeb0, 91c5352, 8fe8e89, 3b997c7
+
+---
+
 ## v1.17 — Boot Ordering & App Update Fix (2026-07-16)
 
 ### Fixed
