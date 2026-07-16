@@ -36,7 +36,7 @@ get_chrome_version() {
 }
 
 get_signal_version() {
-    readlink -f "$HOME_DIR/.nix-profile/bin/signal-desktop" 2>/dev/null | grep -oP 'signal-desktop-[0-9.]+' || echo "not found"
+    runuser -u $USER -- bash -c ". $NIX_SH && nix-store -qR \$(readlink -f $HOME_DIR/.nix-profile)" 2>/dev/null | grep -oP 'signal-desktop-[0-9.]+' | head -1 || echo "not found"
 }
 
 # Create log directory
