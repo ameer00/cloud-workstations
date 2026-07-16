@@ -379,6 +379,79 @@ else
 fi
 
 # =============================================================================
+# Boot Ordering & App Updates (F-0083)
+# =============================================================================
+log ""
+log "--- Boot Ordering & App Updates (F-0083) ---"
+
+# Test 1: 011_bootstrap.sh exists, 000_bootstrap.sh does NOT
+if [ -f /etc/workstation-startup.d/011_bootstrap.sh ]; then
+    test_pass "011_bootstrap.sh exists in startup.d"
+else
+    test_fail "011_bootstrap.sh missing from /etc/workstation-startup.d/"
+fi
+if [ ! -f /etc/workstation-startup.d/000_bootstrap.sh ]; then
+    test_pass "000_bootstrap.sh removed from startup.d"
+else
+    test_fail "000_bootstrap.sh still exists in /etc/workstation-startup.d/ (should be renamed to 011)"
+fi
+
+# Test 2: google-chrome-stable resolves to Nix profile, not /usr/bin (apt Chrome removed)
+CHROME_PATH=$(runuser -u $USER -- bash -c ". $NIX_SH && export PATH=$HOME_DIR/.nix-profile/bin:\$PATH && which google-chrome-stable" 2>/dev/null)
+if echo "$CHROME_PATH" | grep -q "$HOME_DIR/.nix-profile"; then
+    test_pass "Chrome resolves to Nix profile ($CHROME_PATH)"
+elif [ -n "$CHROME_PATH" ]; then
+    test_fail "Chrome resolves to $CHROME_PATH (expected ~/.nix-profile/)"
+else
+    test_fail "google-chrome-stable not found on PATH"
+fi
+
+# Test 3: Nix channel freshness — home-manager generation updated within the last 48h
+HM_LATEST=$(runuser -u $USER -- bash -c ". $NIX_SH && home-manager generations" 2>/dev/null | head -1)
+if [ -n "$HM_LATEST" ]; then
+    HM_DATE=$(echo "$HM_LATEST" | grep -oP '\d{4}-\d{2}-\d{2}' | head -1)
+    if [ -n "$HM_DATE" ]; then
+        HM_EPOCH=$(date -d "$HM_DATE" +%s 2>/dev/null)
+        NOW_EPOCH=$(date +%s)
+        AGE_HOURS=$(( (NOW_EPOCH - HM_EPOCH) / 3600 ))
+        if [ $AGE_HOURS -le 48 ]; then
+            test_pass "Home Manager generation is recent ($HM_DATE, ${AGE_HOURS}h ago)"
+        else
+            test_fail "Home Manager generation is stale ($HM_DATE, ${AGE_HOURS}h ago — expected within 48h)"
+        fi
+    else
+        test_fail "Could not parse date from home-manager generation: $HM_LATEST"
+    fi
+else
+    test_fail "No home-manager generations found"
+fi
+
+# Test 4: No 'user user does not exist' errors in CURRENT boot's app-update.log
+if [ -f "$HOME_DIR/logs/app-update.log" ]; then
+    LAST_BOOT_LOG=$(tac "$HOME_DIR/logs/app-update.log" | sed '/=== App update started ===/q' | tac)
+    if echo "$LAST_BOOT_LOG" | grep -q "user user does not exist"; then
+        test_fail "Current boot has 'user user does not exist' errors in app-update.log"
+    else
+        test_pass "No 'user does not exist' errors in current boot's app-update.log"
+    fi
+else
+    test_fail "app-update.log missing (07-apps.sh may not have run)"
+fi
+
+# Test 5: No FAIL lines in current boot's app-update.log
+if [ -f "$HOME_DIR/logs/app-update.log" ]; then
+    LAST_BOOT_LOG=$(tac "$HOME_DIR/logs/app-update.log" | sed '/=== App update started ===/q' | tac)
+    if echo "$LAST_BOOT_LOG" | grep -q "FAIL:"; then
+        FAIL_LINES=$(echo "$LAST_BOOT_LOG" | grep "FAIL:" | head -5)
+        test_fail "Current boot has FAIL lines in app-update.log: $FAIL_LINES"
+    else
+        test_pass "No FAIL lines in current boot's app-update.log"
+    fi
+else
+    test_fail "app-update.log missing (07-apps.sh may not have run)"
+fi
+
+# =============================================================================
 # Tailscale (opt-in — only tested if module enabled + TAILSCALE_AUTHKEY in ~/.env)
 # =============================================================================
 log ""
