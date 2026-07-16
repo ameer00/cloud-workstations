@@ -1,6 +1,6 @@
 # Cloud Workstation — Startup Scripts
 
-Summary of all boot scripts that run on every workstation start. Scripts execute in numerical order via `~/boot/setup.sh`, which is called by the Docker entrypoint's `000_bootstrap.sh`.
+Summary of all boot scripts that run on every workstation start. Scripts execute in numerical order via `~/boot/setup.sh`, which is called by the Docker entrypoint's `011_bootstrap.sh` (runs after Google's `010_add-user.sh` creates the `user` account).
 
 ## Boot Sequence
 
@@ -14,7 +14,7 @@ Summary of all boot scripts that run on every workstation start. Scripts execute
 | 6 | `06-prompt.sh` | Install Starship prompt, deploy foot terminal config | Yes — overwrites configs | ~5s |
 | 6a | `06a-tailscale.sh` | Tailscale VPN (opt-in via `TAILSCALE_AUTHKEY` in `~/.env`). Starts tailscaled, authenticates, enables SSH, configures SSH password auth, adds iptables rule for SSH on tailscale0 | Yes — checks running/connected | ~5s |
 | 6b | `06b-tmux.sh` | Deploy `tmux.conf` (Tokyo Night theme), `claude-tmux`, and `tmux-debug` scripts | Yes — copy overwrite | ~1s |
-| 7 | `07-apps.sh` | Upgrade AI tools (npm: Claude Code, Codex, Cody, Pi; go: OpenCode; pip: Aider; gh: Copilot), run `home-manager switch` | Yes — update/switch idempotent | ~60s |
+| 7 | `07-apps.sh` | Upgrade AI tools (npm: Claude Code, Codex, Cody, Pi; go: OpenCode; pip: Aider; gh: Copilot), run `home-manager switch`. Logs per-step PASS/FAIL with exit codes, captures before/after Chrome+Signal versions. Guards on user account existence. | Yes — update/switch idempotent | ~60s |
 | 8 | `07a-lang-deps.sh` | Install apt build dependencies for language compilers (build-essential, libssl-dev, etc.) | Yes — dpkg -s check | ~10s |
 | 9 | `07b-languages.sh` | Install/update Go (tarball), Rust (rustup), Python (pyenv), Ruby (rbenv) | Yes — existence checks | First: ~15min, subsequent: ~30s |
 | 10 | `09-wofi.sh` | Deploy wofi config + Tokyo Night style.css to `~/.config/wofi/` | Yes — copy overwrite | ~1s |
@@ -25,7 +25,8 @@ Summary of all boot scripts that run on every workstation start. Scripts execute
 
 ```
 Docker entrypoint
-  └── /etc/workstation-startup.d/000_bootstrap.sh
+  └── /etc/workstation-startup.d/010_add-user.sh  (Google base image — creates user account)
+  └── /etc/workstation-startup.d/011_bootstrap.sh  (must run AFTER 010)
         └── ~/boot/setup.sh
               ├── 01-nix.sh
               ├── 02-nvidia.sh
