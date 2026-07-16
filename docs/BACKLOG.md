@@ -1,7 +1,7 @@
 # Project Backlog — Cloud Workstation
 
 **Maintained by:** TPM
-**Last updated:** 2026-07-16 (Milestone 17 created — Boot ordering & app update fix)
+**Last updated:** 2026-07-16 (Milestone 18 created — Chrome /dev/shm crash fix)
 
 ---
 
@@ -213,6 +213,17 @@
 | F-0095 | Add boot tests for bootstrap ordering, Chrome source, and app update success | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | done | SWE-Test | feature/boot-update-fix | F-0093, F-0094 | Implemented 5 tests in 10-tests.sh: (1) 011_bootstrap exists + 000 removed, (2) Chrome resolves to Nix profile not /usr/bin, (3) Home Manager generation freshness within 48h, (4) no runuser errors in current boot's app-update.log, (5) no FAIL lines in current boot. Log scoping uses tac+sed to isolate latest boot block. All verified via simulation + bash -n. |
 | F-0096 | Update STARTUP_SCRIPTS.md for 011_bootstrap.sh | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P1 | done | SWE-1 | feature/boot-update-fix | F-0093 | Updated intro, execution flow diagram (shows 010_add-user.sh → 011_bootstrap.sh ordering), and 07-apps.sh description (error checking, version logging). Spec R5. |
 | F-0097 | Image rebuild + stop/start E2E verification on gement02 and gement03 | [F-0083](specs/F-0083-boot-ordering-app-updates.md) | P0 | done | PE, SWE-QA | feature/boot-update-fix | F-0093, F-0094, F-0095, F-0096 | **Verified 2026-07-16.** Build path: direct `gcloud builds submit` from worktree source (main untouched). gement02 build 10f70d08 (15min), gement03 build 9f422459 (16min). Full stop/start on both. Boot scripts manually deployed to ~/boot/ (persistent disk). Results: (a) 011_bootstrap.sh present, 000 absent on both. (b) Zero "user user does not exist" errors on both. (c) Chrome 146.0.7680.177→150.0.7871.124 on both. Signal "not found" (signal-desktop symlink exists but not on PATH — pre-existing, not a regression). (d) `which google-chrome-stable` = /home/user/.nix-profile/bin/google-chrome-stable on both. (e) gement02: 81 PASS/3 FAIL/2 WARN; gement03: 67 PASS/17 FAIL/2 WARN (extra FAILs from profile switch minimal→full, not F-0083 regressions). All 5 F-0095 tests PASS on both. (f) Chrome runs headless from /nix/store on both (exit 0). gement01 NOT touched. |
+
+---
+
+## Milestone 18: Chrome /dev/shm Crash Fix
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0103 | Nix Chrome/Chromium override with --disable-dev-shm-usage in home.nix | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | backlog | SWE-1 | feature/chrome-shm-fix | — | Replace bare `google-chrome` and `chromium` with `(pkg.override { commandLineArgs = "--disable-dev-shm-usage"; })` in home.nix on all 3 machines + `home-manager switch`. Spec R1. |
+| F-0104 | Update cloud-build-setup.sh home.nix template with Chrome override | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | backlog | SWE-1 | feature/chrome-shm-fix | F-0103 | Remove `chromium google-chrome` from BASE_PKGS, add override expressions to heredoc template. Spec R2. |
+| F-0105 | Boot test: verify Chrome/Chromium wrappers contain --disable-dev-shm-usage | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | backlog | SWE-Test | feature/chrome-shm-fix | F-0103 | Add grep tests for both wrappers in 10-tests.sh. Constraint: gement01 live file has unmerged Antigravity-2.0 content — repo edit is authoritative; live deploy must merge, not clobber. Spec R3. |
+| F-0106 | E2E verification: headless dump-dom + interactive wofi launch on all 3 machines | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | backlog | SWE-QA | feature/chrome-shm-fix | F-0103, F-0104, F-0105 | Run A/B headless test, grep wrapper, PO confirms interactive Chrome from wofi on gement01. Spec R4. |
 
 ---
 
