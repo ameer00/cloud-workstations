@@ -472,6 +472,49 @@ else
 fi
 
 # =============================================================================
+# Workspace Layout (F-0108/F-0109)
+# =============================================================================
+log ""
+log "--- Workspace Layout (F-0108/F-0109) ---"
+
+WS_SCRIPT="$HOME_DIR/boot/08-workspaces.sh"
+if [ -f "$WS_SCRIPT" ]; then
+    # ws1, ws2, ws3 should launch foot terminals
+    if grep -q 'launch_and_wait 1 .* "\$FOOT"' "$WS_SCRIPT"; then
+        test_pass "ws1 = foot terminal in 08-workspaces.sh"
+    else
+        test_fail "ws1 = foot terminal not found in 08-workspaces.sh"
+    fi
+    if grep -q 'launch_and_wait 2 .* "\$FOOT"' "$WS_SCRIPT"; then
+        test_pass "ws2 = foot terminal in 08-workspaces.sh"
+    else
+        test_fail "ws2 = foot terminal not found in 08-workspaces.sh"
+    fi
+    if grep -q 'launch_and_wait 3 .* "\$FOOT"' "$WS_SCRIPT"; then
+        test_pass "ws3 = foot terminal in 08-workspaces.sh"
+    else
+        test_fail "ws3 = foot terminal not found in 08-workspaces.sh"
+    fi
+    # ws4 should launch Chrome via sway exec
+    if grep -q 'sway_exec_and_wait 4 .*google-chrome-stable' "$WS_SCRIPT"; then
+        test_pass "ws4 = Chrome (via sway exec) in 08-workspaces.sh"
+    else
+        test_fail "ws4 = Chrome (via sway exec) not found in 08-workspaces.sh"
+    fi
+    # No Antigravity autostart
+    if grep -qi 'antigravity' "$WS_SCRIPT"; then
+        test_fail "Antigravity still referenced in 08-workspaces.sh"
+    else
+        test_pass "No Antigravity autostart in 08-workspaces.sh"
+    fi
+else
+    test_fail "08-workspaces.sh not found at $WS_SCRIPT"
+fi
+
+# google-chrome-stable binary must exist
+check_binary "Google Chrome" "google-chrome-stable"
+
+# =============================================================================
 # Tailscale (opt-in — only tested if module enabled + TAILSCALE_AUTHKEY in ~/.env)
 # =============================================================================
 log ""

@@ -21,6 +21,24 @@ Summary of all boot scripts that run on every workstation start. Scripts execute
 | 11 | `09-snippets.sh` | Deploy snippet-picker script + default snippets.conf (no-clobber) | Yes — cp -n for user config | ~1s |
 **Note:** `08-workspaces.sh` and `10-tests.sh` are NOT run by setup.sh — they run via systemd services after Sway starts. See below.
 
+### 08-workspaces.sh — Workspace Layout
+
+Launches apps across 4 sway workspaces at boot:
+
+| Workspace | App | Launch method |
+|-----------|-----|---------------|
+| ws1 | foot terminal | `launch_and_wait` (runuser, full Nix path) |
+| ws2 | foot terminal | `launch_and_wait` (runuser, full Nix path) |
+| ws3 | foot terminal | `launch_and_wait` (runuser, full Nix path) |
+| ws4 | Google Chrome | `sway_exec_and_wait` (swaymsg exec, session env) |
+
+Chrome is launched via `swaymsg exec` rather than `runuser` because the Nix
+`google-chrome-stable` wrapper is not on the minimal system PATH available to
+`runuser`, and Chrome requires the full sway session environment (DBUS, Nix
+LD_LIBRARY_PATH, etc.) to produce a visible window. Antigravity is NOT
+auto-started (removed in v1.18 / F-0108); it remains installed and manually
+launchable via its sway keybinding (Ctrl+Shift+G).
+
 ## Execution Flow
 
 ```
