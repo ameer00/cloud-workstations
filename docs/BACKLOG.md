@@ -1,7 +1,7 @@
 # Project Backlog — Cloud Workstation
 
 **Maintained by:** TPM
-**Last updated:** 2026-07-16 (Milestone 18 created — Chrome /dev/shm crash fix)
+**Last updated:** 2026-07-17 (Milestone 19 created — Workspace autostart remap)
 
 ---
 
@@ -224,6 +224,18 @@
 | F-0104 | Update cloud-build-setup.sh home.nix template with Chrome override | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | done | SWE-1 | feature/chrome-shm-fix | F-0103 | Removed `chromium google-chrome` from BASE_PKGS, added override expressions to heredoc template. Fresh setups generate correct home.nix. Commit 91c5352. |
 | F-0105 | Boot test: verify Chrome/Chromium wrappers contain --disable-dev-shm-usage | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | done | SWE-Test | feature/chrome-shm-fix | F-0103 | 2 grep tests added to 10-tests.sh for both wrappers. Deployed: gement02/03 overwritten with worktree version; gement01 appended F-0103 block preserving Antigravity tests. Commit 91c5352. |
 | F-0106 | E2E verification: headless dump-dom + interactive wofi launch on all 3 machines | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | done | PE | feature/chrome-shm-fix | F-0103, F-0104, F-0105 | Deployed to all 3 machines. Wrappers verified (grep + headless dump-dom >1MB on all 3). gement02/03 required nix profile repair (stale env-manifest.nix). PO testing interactive Chrome on gement01 (pending final confirmation). Commit 8fe8e89. |
+
+---
+
+## Milestone 19: Workspace Autostart Remap
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0108 | Remap workspace assignments (ws1-3 foot, ws4 Chrome, remove Antigravity) | [F-0108](specs/F-0108-workspace-autostart-remap.md) | P0 | backlog | SWE-1 | feature/workspace-remap | — | Modify 08-workspaces.sh: ws1/2/3=foot, ws4=Chrome. Remove Antigravity autostart block entirely. Update header comments and log messages. |
+| F-0109 | Root-cause and fix Chrome autostart (window never appears) | [F-0108](specs/F-0108-workspace-autostart-remap.md) | P0 | backlog | SWE-1 | feature/workspace-remap | F-0108 | Chrome launched via runuser with hand-crafted env + --ozone-platform=wayland never produces a window. Working keybinding uses sway exec + no --ozone-platform=wayland. Fix launch method so Chrome reliably appears on ws4. Spec R2. |
+| F-0110 | Add boot tests for new workspace layout | [F-0108](specs/F-0108-workspace-autostart-remap.md) | P0 | backlog | SWE-Test | feature/workspace-remap | F-0108, F-0109 | Tests in 10-tests.sh: no antigravity in 08-workspaces.sh, Chrome on ws4, foot on ws1/2/3. Spec R5. |
+| F-0111 | Deploy to all 3 workstations (gement01, gement02, gement03) | [F-0108](specs/F-0108-workspace-autostart-remap.md) | P0 | backlog | PE | feature/workspace-remap | F-0108, F-0109, F-0110 | Copy updated 08-workspaces.sh and 10-tests.sh to ~/boot/ on all 3 machines. Verify cloud-build-setup.sh deploys correctly for fresh setups. Update STARTUP_SCRIPTS.md. Spec R4 + R6. |
+| F-0112 | QA: full stop/start verification on 2+ projects | [F-0108](specs/F-0108-workspace-autostart-remap.md) | P0 | backlog | SWE-QA | feature/workspace-remap | F-0111 | Full stop/start cycle on at least 2 of 3 projects. Verify: ws1-3 have foot, ws4 has Chrome (visible window), no Antigravity process, boot-test-results.txt all PASS. |
 
 ---
 
