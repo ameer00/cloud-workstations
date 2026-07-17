@@ -1,5 +1,70 @@
 # Development Progress Log — Cloud Workstation
 
+## Session 20 — 2026-07-16
+
+### Goals
+- Execute Milestone 18: Fix Chrome renderer crashes from missing `--disable-dev-shm-usage` (P0 regression from v1.17)
+- Backlog items F-0103, F-0104, F-0105, F-0106
+
+### Root Cause
+
+v1.17 (F-0083) removed the apt-installed Chrome package and its `dpkg-divert` wrapper from the Dockerfile. That wrapper had been silently injecting `--disable-dev-shm-usage` (along with `--no-sandbox --no-zygote --disable-gpu`) into every Chrome launch path. The Nix `google-chrome` package launches bare — no flags injected. The container's `/dev/shm` is only 64 MB; Chrome renderer processes mmap-allocate shared memory there by default, causing OOM crashes on memory-heavy pages (e.g., Chrome Web Store).
+
+**Why QA missed it:** Milestone 17 QA tested Chrome headless with `about:blank` — a page too light to fill 64 MB of `/dev/shm`. The crash only manifests on real pages that allocate significant shared memory.
+
+### Completed
+
+- **F-0103** (Nix Chrome/Chromium override with `--disable-dev-shm-usage` in home.nix):
+  - Replaced bare `google-chrome` and `chromium` packages with `(pkg.override { commandLineArgs = "--disable-dev-shm-usage"; })` in home.nix on all 3 machines
+  - **Correction from spec:** Spec assumed `chromium.override { commandLineArgs }` takes a list type; SWE-1 verified against nixpkgs source that both `google-chrome` and `chromium` use string-typed `commandLineArgs` — both overrides use the same string syntax
+  - Applied via `home-manager switch` on gement01, gement02, gement03 — no reboots required
+  - Commit: 91c5352
+
+- **F-0104** (Update `cloud-build-setup.sh` home.nix template with Chrome override):
+  - Removed `chromium google-chrome` from `BASE_PKGS` string
+  - Added override expressions directly into the `home.packages` heredoc template (after `${NIX_PKG_LIST}` interpolation)
+  - Nix syntax validated — generated home.nix parses cleanly
+  - Commit: 91c5352 (same commit as F-0103 — single atomic change)
+
+- **F-0105** (Boot test: verify Chrome/Chromium wrappers contain `--disable-dev-shm-usage`):
+  - Added grep tests for both `google-chrome-stable` and `chromium` wrappers in `workstation-image/boot/10-tests.sh`
+  - SWE-Test verified: all checks PASS, zero bugs found in SWE-1's changes (bash -n, Nix syntax parse, no template breakage)
+  - gement01 deployment: F-0103 test block APPENDED to live `~/boot/10-tests.sh` (Antigravity-2.0 tests from `feature/composable-install` preserved intact; backup at `~/boot/10-tests.sh.bak-f0103`). Repo copy remains authoritative — will reconcile on composable-install merge
+  - Commit: 91c5352
+
+- **F-0106** (E2E verification: headless dump-dom + wrapper grep on all 3 machines):
+  - `home-manager switch` applied on gement01, gement02, gement03
+  - Headless A/B test: `google-chrome-stable --headless --dump-dom https://chromewebstore.google.com` returns >0 bytes WITHOUT explicit `--disable-dev-shm-usage` flag on all 3 machines (wrapper supplies it)
+  - Wrapper grep: `grep -- '--disable-dev-shm-usage' "$(which google-chrome-stable)"` confirms flag present on all 3 machines
+  - Backlog updated and pushed
+  - Commit: 8fe8e89 (backlog update)
+
+### Findings
+
+1. **Nix profile corruption on gement02 and gement03**: PE discovered missing `env-manifest.nix` in the Nix user profile on both gement02 and gement03 during `home-manager switch`. Repaired in-place during deployment. Worth investigating root cause as a future item — may indicate a fragility in the Nix store persistence (`/nix` bind mount from `/home/user/nix`).
+
+2. **QA gap — headless test coverage**: The v1.17 QA gap (testing `about:blank` instead of a real page) exposed a systemic weakness: headless smoke tests must exercise pages heavy enough to trigger real resource constraints. Future QA specs should require a non-trivial page (e.g., Chrome Web Store) for renderer-stress validation.
+
+### Key Decisions
+- **String-typed `commandLineArgs` for both packages**: SWE-1 verified nixpkgs source — both `google-chrome` and `chromium` accept a string, not a list. Spec's list-type assumption for chromium was incorrect.
+- **No reboots**: `home-manager switch` regenerates the Nix wrapper immediately — the fix is live as soon as the switch completes.
+- **Append, don't clobber on gement01**: Live `10-tests.sh` on gement01 contains Antigravity-2.0 test content from `feature/composable-install` that hasn't merged yet. PE appended F-0103 tests rather than overwriting, with backup at `10-tests.sh.bak-f0103`.
+
+### Pipeline
+- PM created spec `docs/specs/F-0103-chrome-shm-crash.md` and backlog items F-0103–F-0106
+- TPM verified task/backlog alignment, monitored dependency chain #2 → #3 → #4
+- SWE-1 implemented F-0103/F-0104/F-0105 in single atomic commit (91c5352)
+- SWE-Test verified all changes — zero bugs, all checks PASS
+- PE deployed to all 3 machines via `home-manager switch`, ran E2E verification, updated backlog (8fe8e89)
+- All work on `feature/chrome-shm-fix` branch in worktree `/home/user/Apps/ws-chromefix`
+
+### Open Items
+1. **PO interactive confirmation pending**: Acceptance criterion R4 requires PO to confirm interactive Chrome from wofi launcher on gement01 loads Chrome Web Store without crashes
+2. **Merge to main + tag**: After PO approval, merge `feature/chrome-shm-fix` to `main` and tag release
+3. **Nix profile corruption**: Investigate root cause of missing `env-manifest.nix` on gement02/gement03 (see Findings #1)
+
+---
+
 ## Session 19 — 2026-07-16
 
 ### Goals

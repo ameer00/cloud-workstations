@@ -452,6 +452,26 @@ else
 fi
 
 # =============================================================================
+# Chrome --disable-dev-shm-usage (F-0103)
+# =============================================================================
+log ""
+log "--- Chrome --disable-dev-shm-usage (F-0103) ---"
+
+CHROME_WRAPPER=$(runuser -u $USER -- bash -c ". $NIX_SH && which google-chrome-stable" 2>/dev/null)
+if [ -n "$CHROME_WRAPPER" ] && grep -q "\-\-disable-dev-shm-usage" "$CHROME_WRAPPER"; then
+    test_pass "Chrome wrapper includes --disable-dev-shm-usage"
+else
+    test_fail "Chrome wrapper missing --disable-dev-shm-usage"
+fi
+
+CHROMIUM_WRAPPER=$(runuser -u $USER -- bash -c ". $NIX_SH && which chromium" 2>/dev/null)
+if [ -n "$CHROMIUM_WRAPPER" ] && grep -q "\-\-disable-dev-shm-usage" "$CHROMIUM_WRAPPER"; then
+    test_pass "Chromium wrapper includes --disable-dev-shm-usage"
+else
+    test_fail "Chromium wrapper missing --disable-dev-shm-usage"
+fi
+
+# =============================================================================
 # Tailscale (opt-in — only tested if module enabled + TAILSCALE_AUTHKEY in ~/.env)
 # =============================================================================
 log ""

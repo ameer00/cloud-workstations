@@ -481,7 +481,7 @@ fi
 log "  Building package list for profile '$PROFILE'..."
 
 # Base packages (all profiles)
-BASE_PKGS="neovim tmux tree ffmpeg git gh curl wget htop ripgrep fd jq unzip chromium google-chrome sway waybar foot wofi thunar grim slurp wl-clipboard clipman mako swaylock swayidle wayvnc nodejs_22"
+BASE_PKGS="neovim tmux tree ffmpeg git gh curl wget htop ripgrep fd jq unzip sway waybar foot wofi thunar grim slurp wl-clipboard clipman mako swaylock swayidle wayvnc nodejs_22"
 
 # IDE packages (ides module — ai + full profiles)
 IDE_PKGS=""
@@ -519,6 +519,8 @@ cat << NIXEOF | ws_pipe "mkdir -p ~/.config/home-manager && cat > ~/.config/home
 
   home.packages = with pkgs; [
     ${NIX_PKG_LIST}
+    (google-chrome.override { commandLineArgs = "--disable-dev-shm-usage"; })
+    (chromium.override { commandLineArgs = "--disable-dev-shm-usage"; })
   ];
 
   programs.zsh = {

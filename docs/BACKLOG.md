@@ -1,7 +1,7 @@
 # Project Backlog — Cloud Workstation
 
 **Maintained by:** TPM
-**Last updated:** 2026-07-16 (Milestone 17 created — Boot ordering & app update fix)
+**Last updated:** 2026-07-16 (Milestone 18 created — Chrome /dev/shm crash fix)
 
 ---
 
@@ -216,6 +216,17 @@
 
 ---
 
+## Milestone 18: Chrome /dev/shm Crash Fix
+
+| ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
+|----|---------|------|----------|--------|-------|--------|--------------|----------|
+| F-0103 | Nix Chrome/Chromium override with --disable-dev-shm-usage in home.nix | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | done | SWE-1 | feature/chrome-shm-fix | — | Both `google-chrome` and `chromium` overridden with `commandLineArgs = "--disable-dev-shm-usage"` in home.nix on all 3 machines. `home-manager switch` applied. gement02/03 required nix profile repair (missing env-manifest.nix). Commit 91c5352. |
+| F-0104 | Update cloud-build-setup.sh home.nix template with Chrome override | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | done | SWE-1 | feature/chrome-shm-fix | F-0103 | Removed `chromium google-chrome` from BASE_PKGS, added override expressions to heredoc template. Fresh setups generate correct home.nix. Commit 91c5352. |
+| F-0105 | Boot test: verify Chrome/Chromium wrappers contain --disable-dev-shm-usage | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | done | SWE-Test | feature/chrome-shm-fix | F-0103 | 2 grep tests added to 10-tests.sh for both wrappers. Deployed: gement02/03 overwritten with worktree version; gement01 appended F-0103 block preserving Antigravity tests. Commit 91c5352. |
+| F-0106 | E2E verification: headless dump-dom + interactive wofi launch on all 3 machines | [F-0103](specs/F-0103-chrome-shm-crash.md) | P0 | done | PE | feature/chrome-shm-fix | F-0103, F-0104, F-0105 | Deployed to all 3 machines. Wrappers verified (grep + headless dump-dom >1MB on all 3). gement02/03 required nix profile repair (stale env-manifest.nix). PO testing interactive Chrome on gement01 (pending final confirmation). Commit 8fe8e89. |
+
+---
+
 ## Future Items
 
 | ID | Feature | Spec | Priority | Status | Owner | Branch | Dependencies | Feedback |
@@ -225,6 +236,7 @@
 | F-0100 | Build speed: ws.sh update command (config-only, no rebuild) | [Research](research/build-speed-optimization.md) | P1 | backlog | — | — | — | Push configs + run boot scripts on existing workstation. ~2min vs 50min for config-only changes. |
 | F-0101 | Cloud Build tags for Console visibility | [Research](research/build-tags.md) | P2 | backlog | — | — | — | Add --tags to builds so outer (ws-setup) and inner (docker-image) are identifiable in Console. |
 | F-0102 | home.nix config drift: single source of truth across projects | — | P1 | backlog | — | — | — | gement01 has chat apps (signal-desktop, telegram-desktop, slack) in home.nix but gement02/03 and cloud-build-setup.sh BASE_PKGS lack them. Make the repo the single source of truth for home.nix and sync all projects. Discovered during F-0097 verification (Signal "not found" on gement02/03). |
+| F-0107 | Investigate nix profile corruption on gement02/03 + boot integrity check | — | P2 | backlog | — | — | — | During F-0103 deployment, gement02/03 had missing env-manifest.nix in ~/.nix-profile (nix-env --set-flag failed). Repaired manually. Root cause suspected: historical /nix copy damage from cp -a during setup. Add a boot check to 10-tests.sh that verifies nix profile integrity (manifest.nix exists, nix-env -q succeeds). |
 
 ---
 
